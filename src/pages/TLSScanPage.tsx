@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   Search, CheckCircle, XCircle, AlertTriangle, Shield, Lock,
   Globe, Calendar, Hash, Key, Server, FileText, Info,
-  Loader, ArrowRight,
+  Loader, ArrowRight, ExternalLink, BookOpen,
 } from 'lucide-react'
 
 // ── API response types ────────────────────────────────────────────────────────
@@ -193,6 +193,206 @@ function buildHeaderAudit(h: ScanResult['headers']): AuditItem[] {
   ]
 }
 
+function buildNISTAudit(r: ScanResult): AuditItem[] {
+  const c = r.certificate
+  const t = r.tls
+  const h = r.headers
+
+  const certAgeDays = (new Date(c.validTo).getTime() - new Date(c.validFrom).getTime()) / 86400000
+
+  const keyStatus = (): Status => {
+    if (c.keyAlgo.startsWith('ECDSA')) return c.bits >= 384 ? 'pass' : c.bits >= 256 ? 'warn' : 'fail'
+    if (c.bits >= 3072) return 'pass'
+    if (c.bits >= 2048) return 'warn'
+    return 'fail'
+  }
+
+  const approvedCurve = (): Status => {
+    if (!c.keyAlgo.startsWith('ECDSA')) return 'pass'
+    return [256, 384, 521].includes(c.bits) ? 'pass' : 'fail'
+  }
+
+  const cipherStatus = (): Status => {
+    const n = t.cipherName
+    if (n.includes('AES_128_GCM') || n.includes('AES_256_GCM') || n.includes('CHACHA20')) return 'pass'
+    if (t.protocol === 'TLSv1.3') return 'pass'
+    if (n.includes('AES') && n.includes('GCM')) return 'pass'
+    if (n.includes('AES')) return 'warn'
+    return 'fail'
+  }
+
+  const hstsStatus = (): Status => {
+    if (!h.hsts) return 'fail'
+    const maxAge = parseInt(h.hsts.match(/max-age=(\d+)/)?.[1] || '0')
+    if (maxAge >= 31536000 && h.hsts.includes('includeSubDomains')) return 'pass'
+    if (maxAge >= 2592000) return 'warn'
+    return 'fail'
+  }
+
+  return [
+    {
+      label: 'SP 800-52 Rev 2 §3.3.1 — TLS Protocol Version',
+      status: t.protocol === 'TLSv1.3' ? 'pass' : t.protocol === 'TLSv1.2' ? 'warn' : 'fail',
+      value: t.protocol,
+      detail: t.protocol === 'TLSv1.3'
+        ? 'Compliant. TLS 1.3 is the NIST-preferred protocol — removes legacy handshake vulnerabilities and mandates AEAD and PFS by design.'
+        : t.protocol === 'TLSv1.2'
+        ? 'Conditionally compliant. TLS 1.2 is the NIST minimum. Configure ssl_protocols TLSv1.2 TLSv1.3 and prefer TLS 1.3 cipher suites.'
+        : 'Non-compliant. TLS 1.0 and 1.1 are explicitly prohibited by NIST SP 800-52 Rev 2. Upgrade immediately.',
+      ref: 'NIST SP 800-52 Rev 2 §3.3.1',
+    },
+    {
+      label: 'SP 800-52 Rev 2 §3.3.2 — Approved Cipher Suite',
+      status: cipherStatus(),
+      value: t.cipherStandard || t.cipherName,
+      detail: 'NIST-approved suites (Table 3-5): TLS_AES_256_GCM_SHA384, TLS_AES_128_GCM_SHA256, TLS_CHACHA20_POLY1305_SHA256 (TLS 1.3); TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384, TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384 (TLS 1.2). RC4, 3DES, NULL, and export ciphers are prohibited.',
+      ref: 'NIST SP 800-52 Rev 2 §3.3.2 Table 3-5',
+    },
+    {
+      label: 'SP 800-52 Rev 2 §3.3.2 — Perfect Forward Secrecy',
+      status: t.protocol === 'TLSv1.3' ? 'pass'
+              : t.cipherName.includes('ECDHE') || t.cipherName.includes('DHE') ? 'pass' : 'fail',
+      value: t.protocol === 'TLSv1.3' ? 'Mandated by TLS 1.3'
+             : t.cipherName.includes('ECDHE') ? 'ECDHE enabled'
+             : t.cipherName.includes('DHE') ? 'DHE enabled' : 'Not enabled',
+      detail: 'NIST requires ephemeral (EC)DHE key exchange to ensure session keys cannot be recovered from a compromised server private key. Static RSA key exchange (no PFS) is prohibited. TLS 1.3 mandates PFS by design.',
+      ref: 'NIST SP 800-52 Rev 2 §3.3.2',
+    },
+    {
+      label: 'SP 800-57 Pt 1 §5.6 — Key Strength (2031+ Horizon)',
+      status: keyStatus(),
+      value: c.keyAlgo,
+      detail: (() => {
+        const s = keyStatus()
+        if (s === 'pass') return c.keyAlgo.startsWith('ECDSA')
+          ? `ECDSA ${c.bits}-bit provides ≥192-bit security. Meets NIST requirement for security through 2031 and beyond.`
+          : `RSA ${c.bits}-bit meets NIST key strength requirements for long-term security beyond 2030.`
+        if (s === 'warn') return c.keyAlgo.startsWith('ECDSA')
+          ? 'ECDSA P-256 is acceptable (128-bit security, adequate through 2030). Migrate to P-384 for certificates requiring security beyond 2030.'
+          : 'RSA 2048-bit provides 112-bit security (adequate through 2030 only). Migrate to RSA 3072-bit or ECDSA P-256 for post-2030 security.'
+        return 'Key strength is below NIST minimums. Replace certificate immediately with RSA ≥2048-bit or ECDSA P-256.'
+      })(),
+      ref: 'NIST SP 800-57 Pt 1 Rev 5 §5.6.1 Table 2',
+    },
+    {
+      label: 'SP 800-186 §4 — ECDSA Approved Curve',
+      status: approvedCurve(),
+      value: c.keyAlgo.startsWith('ECDSA') ? `P-${c.bits} (secp${c.bits}r1)` : `N/A — ${c.keyAlgo}`,
+      detail: c.keyAlgo.startsWith('ECDSA')
+        ? [256, 384, 521].includes(c.bits)
+          ? `P-${c.bits} is a NIST-approved curve per SP 800-186. Provides ${c.bits === 256 ? '128' : c.bits === 384 ? '192' : '256'}-bit security. Brainpool, secp256k1, and X25519 are not approved for FIPS 140 use.`
+          : `P-${c.bits} is not a NIST-approved curve. Use P-256 (secp256r1), P-384 (secp384r1), or P-521 (secp521r1).`
+        : 'Certificate uses RSA — NIST SP 800-186 elliptic curve requirements do not apply. Consider ECDSA for new certificates.',
+      ref: 'NIST SP 800-186 §4 / FIPS 186-5',
+    },
+    {
+      label: 'SP 800-57 §5.3.6 — Certificate Cryptoperiod',
+      status: certAgeDays <= 90 ? 'pass' : certAgeDays <= 397 ? 'warn' : 'fail',
+      value: `${Math.round(certAgeDays)}-day validity`,
+      detail: certAgeDays <= 90
+        ? '≤90-day certificate. Aligns with NIST SP 800-57 short-lived credential guidance and CA/Browser Forum TM2024-001. Automate renewal via ACME (cert-manager, Certbot).'
+        : certAgeDays <= 397
+        ? 'Validity ≤397 days meets CA/Browser Forum Baseline §6.3.2. NIST SP 800-57 recommends shorter cryptoperiods to limit the window of exposure on key compromise.'
+        : 'Validity >397 days. CA/Browser Forum Baseline Requirements and NIST SP 800-57 require reissuance. Browsers and clients will reject certificates with validity over 398 days.',
+      ref: 'NIST SP 800-57 Pt 1 §5.3.6 / CA/B Forum BR §6.3.2',
+    },
+    {
+      label: 'SP 800-52 Rev 2 §3.4 — Certificate Revocation',
+      status: c.hasOCSP ? 'pass' : c.hasCRL ? 'warn' : 'fail',
+      value: c.hasOCSP ? `OCSP: ${c.ocspUrl}` : c.hasCRL ? 'CRL only' : 'None found',
+      detail: c.hasOCSP
+        ? 'OCSP endpoint present. NIST requires real-time revocation status. Enable OCSP stapling in nginx (ssl_stapling on; ssl_stapling_verify on;) to cache the response server-side and reduce client handshake latency.'
+        : c.hasCRL
+        ? 'CRL-only revocation. NIST accepts CRL but recommends OCSP for lower latency. CRL downloads can be large and cached for hours — revocation propagation is delayed.'
+        : 'No revocation mechanism found. NIST SP 800-52 Rev 2 §3.4 requires OCSP or CRL for all TLS certificates. A compromised certificate cannot be invalidated before expiry.',
+      ref: 'NIST SP 800-52 Rev 2 §3.4',
+    },
+    {
+      label: 'SP 800-95 §6.2 — HSTS Transport Enforcement',
+      status: hstsStatus(),
+      value: h.hsts || 'Not set',
+      detail: h.hsts
+        ? 'HSTS present. NIST SP 800-95 requires enforced transport security. Best practice: Strict-Transport-Security: max-age=31536000; includeSubDomains; preload — submit to the HSTS preload list to eliminate first-visit HTTP exposure.'
+        : 'HSTS not configured. NIST SP 800-95 §6.2 requires transport security enforcement. Without HSTS, clients are vulnerable to SSL stripping and protocol downgrade attacks on first connection.',
+      ref: 'NIST SP 800-95 §6.2 / RFC 6797',
+    },
+    {
+      label: 'SP 800-95 §6.4 — Content Security Policy',
+      status: h.csp ? 'pass' : 'fail',
+      value: h.csp ? 'Configured' : 'Not set',
+      detail: h.csp
+        ? 'CSP present. NIST SP 800-95 §6.4 identifies web injection as critical. Review policy: avoid unsafe-inline and unsafe-eval — use script nonces or hashes instead. Verify no overly permissive origins (e.g., *).'
+        : 'No Content-Security-Policy. NIST SP 800-95 §6.4 identifies XSS as a critical web threat. CSP is the primary browser-enforced mitigation. Implement: default-src \'self\'; script-src \'self\' as a baseline.',
+      ref: 'NIST SP 800-95 §6.4 / OWASP CSP Cheat Sheet',
+    },
+  ]
+}
+
+const NIST_REFS = [
+  {
+    id: 'SP 800-52 Rev 2',
+    title: 'Guidelines for TLS Implementations',
+    year: '2019',
+    url: 'https://doi.org/10.6028/NIST.SP.800-52r2',
+    color: 'text-mi-cyan',
+    borderColor: 'border-mi-cyan/20',
+    bgColor: 'bg-mi-cyan/5',
+    items: [
+      'TLS 1.3 preferred — TLS 1.2 minimum; TLS 1.0/1.1 prohibited',
+      'AEAD cipher suites only: AES-GCM, ChaCha20-Poly1305',
+      'Ephemeral (EC)DHE key exchange mandatory (Perfect Forward Secrecy)',
+      'OCSP or CRL revocation checking required for all certs',
+      'RSA ≥2048-bit or ECDSA P-256/P-384 minimum',
+    ],
+  },
+  {
+    id: 'SP 800-57 Pt 1 Rev 5',
+    title: 'Recommendation for Key Management',
+    year: '2020',
+    url: 'https://doi.org/10.6028/NIST.SP.800-57pt1r5',
+    color: 'text-pki',
+    borderColor: 'border-pki/20',
+    bgColor: 'bg-pki/5',
+    items: [
+      'RSA 2048-bit: 112-bit security, adequate through 2030 only',
+      'RSA 3072-bit or ECDSA P-384: security beyond 2030',
+      'Short cryptoperiods minimize compromise exposure window',
+      'Automate certificate renewal — ACME, cert-manager, Vault PKI',
+    ],
+  },
+  {
+    id: 'SP 800-186',
+    title: 'Discrete Log-Based Cryptography: ECC',
+    year: '2023',
+    url: 'https://doi.org/10.6028/NIST.SP.800-186',
+    color: 'text-spiffe',
+    borderColor: 'border-spiffe/20',
+    bgColor: 'bg-spiffe/5',
+    items: [
+      'Approved curves: P-256 (128-bit), P-384 (192-bit), P-521 (256-bit)',
+      'Brainpool, secp256k1, X25519 — not approved for FIPS 140 use',
+      'ECDSA preferred over RSA: smaller keys, faster TLS handshakes',
+      'Use P-384+ for certificates requiring security beyond 2030',
+    ],
+  },
+  {
+    id: 'SP 800-95',
+    title: 'Guide to Secure Web Services',
+    year: '2007',
+    url: 'https://doi.org/10.6028/NIST.SP.800-95',
+    color: 'text-mi-gold',
+    borderColor: 'border-mi-gold/20',
+    bgColor: 'bg-mi-gold/5',
+    items: [
+      'HSTS: max-age=31536000; includeSubDomains; preload',
+      'Content-Security-Policy to prevent XSS and injection',
+      'X-Content-Type-Options: nosniff (prevent MIME sniffing)',
+      'Remove Server version tokens — server_tokens off in nginx',
+      'X-Frame-Options or CSP frame-ancestors for clickjacking defense',
+    ],
+  },
+]
+
 function score(items: { status: Status }[]) {
   const pass = items.filter(i => i.status === 'pass').length
   const warn = items.filter(i => i.status === 'warn').length
@@ -278,10 +478,12 @@ export default function TLSScanPage() {
     }
   }
 
-  const tlsAudit    = result ? buildTLSAudit(result)    : []
+  const tlsAudit    = result ? buildTLSAudit(result)           : []
   const headerAudit = result ? buildHeaderAudit(result.headers) : []
+  const nistAudit   = result ? buildNISTAudit(result)           : []
   const tlsScore    = score(tlsAudit)
   const hdrScore    = score(headerAudit)
+  const nistScore   = score(nistAudit)
   const overallPct  = result
     ? Math.round((tlsScore.pass + hdrScore.pass) / (tlsScore.total + hdrScore.total) * 100)
     : 0
@@ -391,10 +593,11 @@ export default function TLSScanPage() {
               </div>
 
               {/* Score cards */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
                 <ScoreCard label="Overall"      pass={tlsScore.pass + hdrScore.pass} total={tlsScore.total + hdrScore.total} color={overallPct >= 80 ? 'text-spiffe' : overallPct >= 55 ? 'text-mi-gold' : 'text-mi-red'} />
                 <ScoreCard label="TLS / Cert"   pass={tlsScore.pass}  total={tlsScore.total}  color="text-mi-cyan" />
                 <ScoreCard label="HTTP Headers" pass={hdrScore.pass}  total={hdrScore.total}  color="text-mi-gold" />
+                <ScoreCard label="NIST Controls" pass={nistScore.pass} total={nistScore.total} color="text-spiffe" />
                 <ScoreCard label="Trusted CA"   pass={result.tls.trusted ? 1 : 0} total={1} color={result.tls.trusted ? 'text-spiffe' : 'text-mi-red'} />
               </div>
 
@@ -486,6 +689,21 @@ export default function TLSScanPage() {
                 ) : null)}
               </div>
 
+              {/* NIST Compliance Assessment */}
+              <div className="space-y-4">
+                <div>
+                  <h3 className="text-xl font-bold flex items-center gap-2">
+                    <BookOpen size={18} className="text-spiffe" /> NIST Compliance Assessment
+                  </h3>
+                  <p className="text-xs text-slate-500 mt-1">
+                    Mapping scan results against NIST SP 800-52 Rev 2, SP 800-57, SP 800-186, and SP 800-95.
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  {nistAudit.map((item, i) => <AuditRow key={i} item={item} delay={i * 0.04} />)}
+                </div>
+              </div>
+
               {/* Scan again nudge */}
               <div className="section-card flex items-center justify-between gap-4 flex-wrap">
                 <p className="text-sm text-slate-400">Want to scan another domain?</p>
@@ -512,6 +730,48 @@ export default function TLSScanPage() {
             <p className="text-slate-700 text-xs font-mono">Inspects TLS certificate, cipher suite, and all HTTP security headers</p>
           </motion.div>
         )}
+
+        {/* NIST Reference Guides — always visible */}
+        <div className="space-y-6 pt-8 border-t border-border">
+          <div>
+            <h2 className="text-xl font-bold flex items-center gap-2">
+              <BookOpen size={18} className="text-spiffe" /> NIST Reference Guides
+            </h2>
+            <p className="text-xs text-slate-500 mt-1">
+              Key NIST publications governing TLS, key management, and web security — applied by this scanner.
+            </p>
+          </div>
+          <div className="grid sm:grid-cols-2 gap-4">
+            {NIST_REFS.map(ref => (
+              <div key={ref.id} className={`rounded-xl border ${ref.borderColor} ${ref.bgColor} p-5 space-y-3`}>
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <p className={`text-xs font-mono font-bold ${ref.color}`}>{ref.id}</p>
+                    <p className="text-sm font-semibold text-white mt-0.5">{ref.title}</p>
+                    <p className="text-[10px] text-slate-600 font-mono">{ref.year}</p>
+                  </div>
+                  <a
+                    href={ref.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={`${ref.color} opacity-60 hover:opacity-100 transition-opacity shrink-0 mt-0.5`}
+                    title="Open NIST document"
+                  >
+                    <ExternalLink size={13} />
+                  </a>
+                </div>
+                <ul className="space-y-1.5">
+                  {ref.items.map((item, i) => (
+                    <li key={i} className="flex items-start gap-2 text-xs text-slate-400">
+                      <span className={`w-1 h-1 rounded-full shrink-0 mt-1.5 ${ref.color.replace('text-', 'bg-')}`} />
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+        </div>
 
       </div>
     </div>
