@@ -1,0 +1,317 @@
+{
+  "nav": {
+    "home": "Inicio",
+    "concepts": "Conceptos",
+    "technologies": "Tecnologías",
+    "tools": "Herramientas",
+    "whatismi": "Qué es la Identidad de Máquina",
+    "whatismi_sub": "Cargas de trabajo, certificados y por qué importan",
+    "threats": "Panorama de Amenazas",
+    "threats_sub": "Vectores de ataque que explotan máquinas",
+    "zerotrust": "Zero Trust",
+    "zerotrust_sub": "Acceso basado en identidad para cada carga de trabajo",
+    "certificates": "Certificados X.509",
+    "certificates_sub": "PKI, ciclo de vida y automatización",
+    "spiffe": "SPIFFE / SPIRE",
+    "spiffe_sub": "Estándar universal de identidad de carga de trabajo",
+    "mtls": "TLS Mutuo",
+    "mtls_sub": "Autenticación criptográfica entre servicios",
+    "jwtoidc": "JWT & OIDC",
+    "jwtoidc_sub": "Autenticación de máquinas basada en tokens",
+    "kubernetes": "Identidad en Kubernetes",
+    "kubernetes_sub": "Identidad de carga de trabajo en clústeres K8s",
+    "flow": "Flujo SPIFFE",
+    "flow_sub": "Diagrama paso a paso de emisión de SVID",
+    "compare": "Comparar Enfoques",
+    "compare_sub": "Comparación lado a lado de métodos de identidad"
+  },
+  "hero": {
+    "eyebrow": "Seguridad de Identidad de Máquina · SPIFFE/SPIRE · X.509 · mTLS · Zero Trust",
+    "title": "Cada Máquina",
+    "titleAccent": "Necesita una Identidad",
+    "subtitle": "Desde contenedores y microservicios hasta pipelines de CI/CD y dispositivos IoT — la identidad de máquina es la base de la seguridad zero trust. Aprende cómo los certificados X.509, SPIFFE/SPIRE y TLS mutuo protegen la infraestructura moderna a escala.",
+    "cta_spiffe": "Flujo SPIFFE",
+    "cta_compare": "Comparar Enfoques",
+    "cta_k8s": "Identidad K8s",
+    "cta_explore": "Explorar conceptos ↓"
+  },
+  "problem": {
+    "badge": "El Problema",
+    "title": "Las máquinas superan a los humanos — pero la mayoría carece de identidades fuertes",
+    "items": [
+      {
+        "icon": "alert",
+        "title": "Proliferación de Certificados",
+        "desc": "Miles de certificados X.509 gestionados manualmente entre equipos. Los certificados caducados causan interrupciones; los olvidados crean superficies de ataque silenciosas."
+      },
+      {
+        "icon": "clock",
+        "title": "Credenciales Hardcoded",
+        "desc": "Claves de API, contraseñas y tokens incrustados en código fuente, imágenes de contenedor y archivos de configuración. Un único repositorio filtrado puede exponer toda la infraestructura."
+      },
+      {
+        "icon": "eye",
+        "title": "Sin Gestión del Ciclo de Vida",
+        "desc": "Las credenciales de servicio se crean pero nunca se rotan. Los certificados caducan sin advertencia. Las cargas de trabajo desmanteladas dejan secretos de larga duración invisibles para los equipos de seguridad."
+      }
+    ],
+    "solution_badge": "La Solución",
+    "solution_title": "Identidad criptográfica para cada carga de trabajo — automatizada de nacimiento a muerte",
+    "solution_desc": "SPIFFE/SPIRE, emisión automatizada de certificados X.509 y TLS mutuo otorgan a cada máquina una identidad verificable. Emitida automáticamente al inicio, rotada continuamente (predeterminado: 1 hora) y revocada instantáneamente al desmantelar."
+  },
+  "architecture": {
+    "badge": "Flujo SPIFFE / SPIRE",
+    "title": "Del inicio de la carga de trabajo al mTLS seguro en 7 pasos",
+    "step_of": "Paso {{current}} de {{total}}",
+    "step_titles": [
+      "Carga de trabajo inicia — SPIRE Agent detecta via Workload API",
+      "Agent atestigua su propia identidad al SPIRE Server",
+      "SPIRE Server valida la carga de trabajo via API de Kubernetes",
+      "SPIRE Server emite SVID (certificado X.509) a la carga de trabajo",
+      "La carga de trabajo inicia conexión mTLS al Servicio B",
+      "Servicio B valida el SVID contra el trust bundle SPIFFE",
+      "Canal mTLS seguro establecido — SVID rota automáticamente cada hora"
+    ],
+    "flow": [
+      "Kubernetes proyecta un token de cuenta de servicio en el sistema de archivos del pod. El SPIRE Agent, ejecutándose como DaemonSet en cada nodo, detecta la nueva carga de trabajo a través de la SPIFFE Workload API.",
+      "El SPIRE Agent recopila datos selectores de la carga de trabajo (UID del pod, cuenta de servicio, namespace) y envía una solicitud de atestación al SPIRE Server.",
+      "El SPIRE Server llama a la API de Kubernetes para verificar que los metadatos del pod coincidan con los selectores esperados en la entrada de registro.",
+      "Una vez verificado, el SPIRE Server firma un SVID X.509 de corta duración y lo entrega a la carga de trabajo a través del Agent. El SVID contiene el SPIFFE ID en el campo SAN.",
+      "La carga de trabajo usa el SVID como certificado cliente TLS para iniciar un handshake TLS mutuo con el Servicio B. No se transmiten claves de API ni contraseñas.",
+      "El Servicio B valida el SVID de la carga de trabajo contra el trust bundle SPIFFE compartido. Ambos lados verifican los certificados del otro, estableciendo autenticación mutua.",
+      "El canal mTLS está activo. Ambas cargas de trabajo tienen SVIDs válidos. El SPIRE Agent rota automáticamente el SVID antes de su vencimiento, manteniendo las credenciales siempre actualizadas."
+    ]
+  },
+  "whatis": {
+    "badge": "Identidad de Máquina 101",
+    "title": "¿Qué es la Identidad de Máquina?",
+    "subtitle": "Una identidad de máquina es una credencial criptográfica que prueba quién — o qué — es una entidad digital, sin intervención humana.",
+    "types_title": "Tipos de máquinas que necesitan identidades",
+    "types": [
+      { "icon": "container", "label": "Contenedores y Pods",  "desc": "Cada pod en Kubernetes necesita una identidad verificable para autenticarse con otros servicios, APIs y almacenes de secretos." },
+      { "icon": "server",    "label": "Máquinas Virtuales",   "desc": "Las VMs en la nube deben probar su identidad ante APIs de nube, vaults y comunicaciones entre servicios." },
+      { "icon": "cpu",       "label": "Pipelines de CI/CD",   "desc": "Los runners de GitHub Actions, Jenkins y GitLab CI necesitan identidades para acceder a secretos, registries y destinos de despliegue." },
+      { "icon": "wifi",      "label": "IoT y Edge",           "desc": "Los dispositivos embebidos y nodos edge requieren certificados ligeros para autenticarse con backends en la nube." },
+      { "icon": "code",      "label": "Funciones Serverless", "desc": "Lambda, Cloud Functions y Azure Functions necesitan tokens de identidad de corta duración para llamar a APIs downstream." },
+      { "icon": "git",       "label": "Cuentas de Servicio",  "desc": "Las cuentas de servicio de Kubernetes, roles de AWS IAM y cuentas de servicio de GCP forman la capa IAM para el acceso máquina-a-máquina." }
+    ],
+    "vs_title": "Identidad de máquina vs. identidad humana",
+    "vs_items": [
+      { "aspect": "Ciclo de Vida",  "human": "Años (duración del empleo)",       "machine": "Horas a días (vida de la carga de trabajo)" },
+      { "aspect": "Escala",         "human": "Miles de usuarios",                "machine": "Millones de cargas de trabajo" },
+      { "aspect": "Rotación",       "human": "Manual (política de 90 días)",     "machine": "Automática (cada 1–24 horas)" },
+      { "aspect": "Credencial",     "human": "Contraseña + MFA",                "machine": "Certificado X.509 / SVID / JWT" },
+      { "aspect": "Revocación",     "human": "Ticket de TI → deshabilitar AD",  "machine": "Dejar de emitir SVIDs → inmediato" },
+      { "aspect": "Auditoría",      "human": "Logs en SIEM",                    "machine": "Transparencia de certificados + telemetría SPIRE" }
+    ]
+  },
+  "threats": {
+    "badge": "Panorama de Amenazas",
+    "title": "Qué ocurre cuando las máquinas carecen de identidades fuertes",
+    "subtitle": "Los principales vectores de ataque que explotan identidades de máquina débiles o ausentes.",
+    "items": [
+      {
+        "icon": "key",
+        "severity": "critical",
+        "title": "Robo de Credenciales",
+        "desc": "Los atacantes escanean GitHub, Docker Hub y logs de CI en busca de claves de API, tokens y certificados expuestos. Una vez obtenidos, permiten movimiento lateral en entornos de nube.",
+        "example": "2020: GitHub escaneado → 2M+ claves de API expuestas en repos públicos"
+      },
+      {
+        "icon": "clock",
+        "severity": "high",
+        "title": "Interrupciones por Caducidad de Certificados",
+        "desc": "Los certificados gestionados manualmente caducan sin advertencia. Un único certificado caducado en un service mesh puede causar una interrupción en producción.",
+        "example": "2021: Interrupción de Spotify por certificado TLS interno caducado"
+      },
+      {
+        "icon": "ghost",
+        "severity": "high",
+        "title": "Identidades Zombie",
+        "desc": "Las cargas de trabajo desmanteladas dejan cuentas de servicio, claves de API y certificados válidos durante meses. Los atacantes comprometen infraestructura abandonada.",
+        "example": "42% de las cuentas de servicio en empresas nunca se desaprovisionan (CyberArk 2023)"
+      },
+      {
+        "icon": "shuffle",
+        "severity": "critical",
+        "title": "Movimiento Lateral via Credenciales de Máquina",
+        "desc": "Una vez que un atacante compromete una carga de trabajo, las credenciales hardcoded permiten movimiento lateral rápido a bases de datos, APIs y almacenes de secretos.",
+        "example": "SolarWinds: atacantes se movieron lateralmente por 9 meses usando credenciales de servicio"
+      },
+      {
+        "icon": "eye",
+        "severity": "medium",
+        "title": "Inyección de Identidad en la Cadena de Suministro",
+        "desc": "Paquetes maliciosos y sistemas de build comprometidos inyectan credenciales backdoor en imágenes de contenedor. Sin firma de imagen y atestación de carga de trabajo, no hay verificación.",
+        "example": "Brecha Codecov: uploader bash modificado para exfiltrar variables de entorno"
+      },
+      {
+        "icon": "server",
+        "severity": "medium",
+        "title": "Man-in-the-Middle en el Service Mesh",
+        "desc": "Sin mTLS entre microservicios, un atacante en la misma red puede interceptar tráfico, repetir solicitudes o inyectar respuestas maliciosas.",
+        "example": "Encuesta CNCF: solo el 36% de los clústeres K8s aplican mTLS entre servicios"
+      }
+    ]
+  },
+  "certificates": {
+    "badge": "X.509 & PKI",
+    "title": "Los certificados son la base de la identidad de máquina",
+    "subtitle": "Los certificados X.509 proporcionan identidad criptográficamente verificable para máquinas. Entender el ciclo de vida es esencial para proteger cualquier infraestructura moderna.",
+    "lifecycle_title": "Ciclo de Vida del Certificado",
+    "lifecycle": [
+      { "step": "1", "label": "Generar",    "desc": "Crear una clave privada y CSR para la carga de trabajo. La clave privada nunca sale de la carga de trabajo." },
+      { "step": "2", "label": "Emitir",     "desc": "La Autoridad Certificadora firma el CSR, vinculando la clave pública a la identidad de la carga de trabajo." },
+      { "step": "3", "label": "Distribuir", "desc": "El certificado firmado se entrega de forma segura. En SPIFFE/SPIRE, el Agent lo gestiona a través de un socket Unix local." },
+      { "step": "4", "label": "Usar",       "desc": "La carga de trabajo presenta el certificado en los handshakes TLS. mTLS usa los certificados de ambos lados." },
+      { "step": "5", "label": "Rotar",      "desc": "Antes del vencimiento, la carga de trabajo solicita un nuevo certificado. SPIRE automatiza la rotación." },
+      { "step": "6", "label": "Revocar",    "desc": "Al desmantelar o comprometer, el certificado se añade al CRL. SPIFFE lo gestiona simplemente dejando de emitir nuevos SVIDs." }
+    ],
+    "tools_title": "Herramientas de automatización",
+    "tools": [
+      { "name": "cert-manager",    "color": "k8s",    "desc": "Controlador de certificados nativo de Kubernetes. Se integra con Let's Encrypt, Vault y CAs personalizadas." },
+      { "name": "SPIRE",           "color": "spiffe",  "desc": "Proyecto CNCF para emisión automatizada de SVID con cortos tiempos de vida." },
+      { "name": "HashiCorp Vault",  "color": "mi-gold", "desc": "Motor de secretos PKI para emisión dinámica de certificados con TTLs configurables." },
+      { "name": "Venafi",           "color": "pki",     "desc": "Plataforma empresarial para gestión de identidad de máquina en nube, on-prem y edge." }
+    ]
+  },
+  "spiffe": {
+    "badge": "SPIFFE / SPIRE",
+    "title": "Identidad universal de carga de trabajo — sin secretos en la configuración",
+    "subtitle": "SPIFFE es un estándar CNCF que otorga a cada carga de trabajo una identidad criptográficamente verificable — sin secretos en variables de entorno, archivos de config o Kubernetes secrets.",
+    "svid_title": "¿Qué es un SVID?",
+    "svid_desc": "Un SVID es un certificado X.509 o JWT que lleva el SPIFFE ID de la carga de trabajo en el campo Subject Alternative Name. El SPIFFE ID es una URI del formato spiffe://trust-domain/path.",
+    "benefits": [
+      { "icon": "shield",  "title": "Sin secretos en cargas de trabajo", "desc": "Las cargas de trabajo reciben SVIDs a través de un socket Unix local. No se pasan credenciales por variables de entorno." },
+      { "icon": "clock",   "title": "Corta duración por defecto",        "desc": "Los SVIDs tienen una duración predeterminada de 1 hora. Comprometer un certificado da al atacante menos de 1 hora." },
+      { "icon": "layers",  "title": "Agnóstico de plataforma",           "desc": "Funciona en bare metal, VMs, contenedores y serverless. Plugins de atestación para AWS, GCP, Azure y Kubernetes." },
+      { "icon": "refresh", "title": "Rotación automática",               "desc": "El SPIRE Agent renueva certificados transparentemente sin ninguna acción de la carga de trabajo." }
+    ],
+    "attestation_title": "Atestación de Carga de Trabajo",
+    "attestation_desc": "SPIRE verifica la identidad inspeccionando datos a nivel del kernel — UID/GID del proceso, SHA-256 del binario, etiquetas del pod o cuenta de servicio de Kubernetes.",
+    "sample_id": "spiffe://prod.ejemplo.com/ns/pagos/sa/checkout-api"
+  },
+  "mtls": {
+    "badge": "TLS Mutuo",
+    "title": "Ambos lados prueban quiénes son — sin contraseñas",
+    "subtitle": "TLS estándar verifica el servidor al cliente. TLS Mutuo (mTLS) añade autenticación del cliente — ambas partes presentan certificados X.509, reemplazando contraseñas y claves de API.",
+    "handshake_title": "El handshake mTLS",
+    "handshake": [
+      { "step": "1", "label": "Client Hello",           "desc": "El cliente envía cipher suites compatibles y versión TLS." },
+      { "step": "2", "label": "Certificado del Servidor","desc": "El servidor envía su certificado X.509. El cliente verifica contra el trust bundle." },
+      { "step": "3", "label": "Certificado del Cliente", "desc": "El servidor solicita el certificado del cliente. El cliente envía su SVID." },
+      { "step": "4", "label": "Verificación de Cert.",   "desc": "Ambos lados verifican los certificados del otro contra el trust bundle SPIFFE." },
+      { "step": "5", "label": "Claves de Sesión",        "desc": "Ambos derivan claves de sesión simétricas. Canal cifrado establecido." },
+      { "step": "6", "label": "Autenticación Mutua OK",  "desc": "Ambas identidades están verificadas. El tráfico fluye por un canal cifrado y mutuamente autenticado." }
+    ],
+    "vs_title": "TLS vs mTLS",
+    "vs": [
+      { "aspect": "Quién autentica",   "tls": "Solo el servidor",          "mtls": "Ambos — cliente y servidor" },
+      { "aspect": "Credencial",        "tls": "Certificado del servidor",  "mtls": "Certificados X.509 de ambos" },
+      { "aspect": "Caso de uso",       "tls": "Navegador → servidor web",  "mtls": "Servicio → servicio (east-west)" },
+      { "aspect": "Resistencia",       "tls": "Suplantación del servidor", "mtls": "Suplantación + MITM" },
+      { "aspect": "¿Necesita contraseña?", "tls": "Frecuentemente sí",    "mtls": "No — el cert ES la credencial" }
+    ],
+    "enforcement_title": "Aplicando mTLS en Kubernetes",
+    "enforcement": [
+      { "tool": "Istio",          "color": "mi-cyan", "desc": "Service mesh con mTLS automático para todo el tráfico east-west via sidecars Envoy." },
+      { "tool": "Linkerd",        "color": "spiffe",  "desc": "Service mesh ligero con mTLS transparente usando SVIDs SPIFFE." },
+      { "tool": "SPIRE + SPIFFE", "color": "mi-gold", "desc": "Capa de identidad de carga de trabajo que otros service meshes consumen. mTLS directo sin mesh completo." },
+      { "tool": "Cilium",         "color": "pki",     "desc": "Red basada en eBPF con aplicación de mTLS en la capa del kernel. Sin sidecar necesario." }
+    ]
+  },
+  "zerotrust": {
+    "badge": "Zero Trust",
+    "title": "Nunca confiar, siempre verificar — para cada máquina",
+    "subtitle": "Zero Trust reemplaza la seguridad de perímetro de red con acceso basado en identidad. La identidad de máquina es el primitivo central: cada carga de trabajo debe probar quién es antes de acceder a cualquier recurso.",
+    "principles": [
+      { "icon": "shield", "title": "Verificar Explícitamente",   "desc": "Autenticar cada carga de trabajo, siempre. Sin confianza implícita basada en ubicación de red, dirección IP o VLAN." },
+      { "icon": "lock",   "title": "Acceso de Mínimo Privilegio","desc": "Cada máquina obtiene solo los permisos necesarios para su tarea actual. Las credenciales de corta duración lo imponen." },
+      { "icon": "eye",    "title": "Asumir Brecha",              "desc": "Diseña como si un atacante ya estuviera dentro. mTLS, SVIDs de corta duración y atestación continua limitan el blast radius." }
+    ],
+    "stack_title": "La pila de identidad de máquina Zero Trust",
+    "stack": [
+      { "layer": "Emisión de Identidad", "color": "mi-gold", "tech": "SPIRE / cert-manager", "desc": "Emite SVIDs X.509 de corta duración para cada carga de trabajo automáticamente." },
+      { "layer": "Autenticación",        "color": "mi-cyan", "tech": "SPIFFE / mTLS",        "desc": "Cada llamada servicio-a-servicio está mutuamente autenticada usando el SVID." },
+      { "layer": "Autorización",         "color": "spiffe",  "tech": "OPA / RBAC / Istio",   "desc": "El motor de políticas valida el SPIFFE ID del llamador contra la política de acceso al recurso." },
+      { "layer": "Acceso a Secretos",    "color": "pki",     "tech": "Vault / Conjur / ASM",  "desc": "La carga de trabajo presenta SVID al almacén de secretos para recuperar credenciales dinámicas." },
+      { "layer": "Observabilidad",       "color": "k8s",     "tech": "Telemetría SPIRE / SIEM","desc": "Cada evento de emisión, rotación y revocación de certificado se registra y es auditable." }
+    ]
+  },
+  "kubernetes": {
+    "badge": "Identidad en Kubernetes",
+    "title": "Identidad de carga de trabajo en clústeres Kubernetes",
+    "subtitle": "Kubernetes proporciona varios primitivos de identidad — pero no todos son fuertes. Aquí está lo que hace cada uno y cómo fortalecerlos con SPIFFE/SPIRE.",
+    "primitives_title": "Primitivos de identidad K8s",
+    "primitives": [
+      {
+        "name": "Tokens de Cuenta de Servicio",
+        "color": "k8s",
+        "strength": "medium",
+        "desc": "Kubernetes monta automáticamente un JWT en cada pod. Desde K8s 1.21, son tokens enlazados con TTL de 1 hora. Usa tokens proyectados para federación OIDC."
+      },
+      {
+        "name": "SVIDs SPIFFE/SPIRE",
+        "color": "mi-gold",
+        "strength": "strong",
+        "desc": "El SPIRE Agent se ejecuta como DaemonSet y emite SVIDs X.509 a los pods a través de la SPIFFE Workload API. Los SVIDs se atestiguan usando la API K8s."
+      },
+      {
+        "name": "Certificados cert-manager",
+        "color": "pki",
+        "strength": "strong",
+        "desc": "cert-manager automatiza el ciclo de vida de certificados X.509 en el clúster. Úsalo con el emisor SPIFFE o tu propia CA para dar a cada pod un certificado TLS válido."
+      },
+      {
+        "name": "Federación de Identidad de Carga de Trabajo",
+        "color": "spiffe",
+        "strength": "strong",
+        "desc": "Federa tokens de cuenta de servicio K8s con AWS IAM, GCP Workload Identity o Azure Managed Identity. Los pods obtienen roles IAM sin almacenar credenciales de nube en Kubernetes secrets."
+      }
+    ],
+    "hardening_title": "Lista de verificación de hardening",
+    "hardening": [
+      "Deshabilitar el montaje automático de tokens de cuenta de servicio en pods que no los necesitan",
+      "Usar tokens proyectados con audience y expiry configurados, no los tokens legacy de larga duración",
+      "Desplegar SPIRE Agent como DaemonSet y registrar todas las cargas de trabajo sensibles",
+      "Habilitar mTLS para todo el tráfico east-west usando Istio, Linkerd o integración SPIFFE directa",
+      "Federar trust domains SPIFFE entre clústeres con bundles de federación SPIRE",
+      "Bloquear el acceso a la API de metadatos de instancia desde pods que no necesitan credenciales de nube",
+      "Auditar trimestralmente todas las relaciones ServiceAccount → ClusterRoleBinding",
+      "Usar OPA Gatekeeper o Kyverno para imponer el registro de carga de trabajo SPIFFE antes del despliegue"
+    ]
+  },
+  "compare": {
+    "badge": "Comparación de Enfoques",
+    "title": "Métodos de identidad de máquina lado a lado",
+    "subtitle": "No todos los enfoques de identidad de máquina son iguales. Compara la postura de seguridad, la sobrecarga operacional y la escalabilidad de cada uno.",
+    "methods": ["Claves Estáticas", "Tokens SA K8s", "SPIFFE/SPIRE", "mTLS + PKI"],
+    "criteria": [
+      { "label": "Sin secretos en la carga de trabajo", "values": [false,  "partial", true,   true  ] },
+      { "label": "Credenciales de corta duración",      "values": [false,  true,      true,   "opt" ] },
+      { "label": "Rotación automática",                 "values": [false,  true,      true,   true  ] },
+      { "label": "Autenticación mutua",                 "values": [false,  false,     true,   true  ] },
+      { "label": "Agnóstico de nube",                   "values": [true,   false,     true,   true  ] },
+      { "label": "Funciona sin mesh",                   "values": [true,   true,      true,   false ] },
+      { "label": "Velocidad de revocación",             "values": ["lenta","rápida",  "rápida","rápida"] },
+      { "label": "Complejidad de ops",                  "values": ["baja", "media",   "alta", "alta"] }
+    ],
+    "best_for": [
+      { "method": "Claves Estáticas", "color": "mi-red",  "use": "Sistemas legacy y prototipos rápidos solamente. Nunca en producción." },
+      { "method": "Tokens SA K8s",    "color": "k8s",     "use": "Federación con proveedores de nube (AWS IRSA, GCP WI). Bueno para acceso a APIs de nube." },
+      { "method": "SPIFFE/SPIRE",     "color": "mi-gold", "use": "Plataformas de microservicios greenfield. Lo mejor en su categoría para identidad east-west." },
+      { "method": "mTLS + PKI",       "color": "pki",     "use": "Empresas con PKI existente. Control total sobre la política de certificados." }
+    ]
+  },
+  "footer": {
+    "desc": "Un explicador interactivo para la seguridad de identidad de máquina — SPIFFE/SPIRE, certificados X.509, mTLS y patrones de identidad de carga de trabajo zero trust.",
+    "concepts": "Conceptos",
+    "resources": "Recursos",
+    "copyright": "© 2025 Machine Identity Explainer",
+    "built_with": "Construido con SPIFFE/SPIRE ·",
+    "spiffe_docs": "Documentación SPIFFE",
+    "cncf": "Proyecto CNCF SPIRE",
+    "nist_zt": "NIST Zero Trust (SP 800-207)",
+    "github": "Ver en GitHub"
+  }
+}
