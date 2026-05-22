@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { Shield, ChevronDown, Menu, X } from 'lucide-react'
+import { Shield, ChevronDown, Menu, X, Info } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 
 const LANGS = ['en', 'pt', 'es'] as const
@@ -135,6 +135,18 @@ export default function NavBar() {
           {desktopMenuBtn('concepts',     CONCEPTS,     t('nav.concepts'))}
           {desktopMenuBtn('technologies', TECHNOLOGIES, t('nav.technologies'))}
           {desktopMenuBtn('tools',        TOOLS,        t('nav.tools'))}
+
+          <Link
+            to="/cert-info"
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-colors ${
+              isActive('/cert-info')
+                ? 'text-white bg-white/5'
+                : 'text-slate-400 hover:text-white hover:bg-white/5'
+            }`}
+          >
+            <Info size={13} />
+            Info
+          </Link>
         </div>
 
         <div className="flex items-center gap-2">
@@ -197,6 +209,19 @@ export default function NavBar() {
                   ))}
                 </div>
               ))}
+
+              <p className="text-[10px] font-mono text-slate-600 uppercase tracking-widest px-2 pt-3 pb-1">
+                Info
+              </p>
+              <Link
+                to="/cert-info"
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${isActive('/cert-info') ? 'bg-white/5' : 'hover:bg-white/5'}`}
+              >
+                <Info size={13} className={isActive('/cert-info') ? 'text-mi-cyan' : 'text-slate-500'} />
+                <span className={`text-sm font-medium ${isActive('/cert-info') ? 'text-mi-cyan' : 'text-slate-300'}`}>
+                  Certificate & Security Audit
+                </span>
+              </Link>
 
               <div className="flex items-center gap-2 px-2 pt-3">
                 {LANGS.map(lang => (

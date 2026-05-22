@@ -12,6 +12,7 @@ import ZeroTrustPage from './pages/ZeroTrustPage'
 import KubernetesPage from './pages/KubernetesPage'
 import FlowPage from './pages/FlowPage'
 import ComparePage from './pages/ComparePage'
+import CertInfoPage from './pages/CertInfoPage'
 
 function ScrollToTop() {
   const { pathname } = useLocation()
@@ -47,6 +48,7 @@ export default function App() {
           <Route path="/kubernetes"  element={<KubernetesPage />}/>
           <Route path="/flow"        element={<FlowPage />}      />
           <Route path="/compare"     element={<ComparePage />}   />
+          <Route path="/cert-info"   element={<CertInfoPage />}  />
         </Route>
       </Routes>
     </Router>
