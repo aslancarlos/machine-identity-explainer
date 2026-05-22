@@ -1,4 +1,5 @@
 import { useState, useRef } from 'react'
+import { useTranslation } from 'react-i18next'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Search, CheckCircle, XCircle, AlertTriangle, Shield, Lock,
@@ -57,19 +58,19 @@ function buildTLSAudit(r: ScanResult): AuditItem[] {
       status: r.tls.trusted ? 'pass' : 'fail',
       value: r.tls.trusted ? 'Verified by OS trust store' : `Not trusted: ${r.tls.authError}`,
       detail: r.tls.trusted
-        ? 'The certificate chain validates against the system trust store (let\'s encrypt / public CA).'
+        ? "The certificate chain validates against the system trust store (Let's Encrypt / public CA)."
         : `The certificate chain could not be verified: ${r.tls.authError}.`,
-      ref: 'RFC 5280 — Certificate validation',
+      ref: 'RFC 5280, Certificate Validation',
     },
     {
       label: 'TLS Protocol Version',
       status: tlsStatus(),
       value: t.protocol,
       detail: t.protocol === 'TLSv1.3'
-        ? 'TLS 1.3 is the recommended protocol. Provides improved security and performance.'
+        ? 'TLS 1.3 is the recommended protocol. Provides improved security and performance over all prior versions.'
         : t.protocol === 'TLSv1.2'
-        ? 'TLS 1.2 is acceptable but consider upgrading to TLS 1.3 only.'
-        : 'TLS 1.0/1.1 are deprecated and insecure. Upgrade immediately.',
+        ? 'TLS 1.2 is acceptable but upgrading to TLS 1.3 only is strongly recommended.'
+        : 'TLS 1.0 and 1.1 are deprecated and insecure. Upgrade immediately.',
       ref: 'NIST SP 800-52 Rev 2 §3.3.1',
     },
     {
@@ -77,18 +78,18 @@ function buildTLSAudit(r: ScanResult): AuditItem[] {
       status: t.cipherName.includes('AES') && t.cipherName.includes('GCM') ? 'pass'
               : t.cipherName.includes('AES') ? 'warn' : 'fail',
       value: t.cipherStandard || t.cipherName,
-      detail: 'AEAD cipher suites (AES-GCM, ChaCha20-Poly1305) provide authenticated encryption. RC4, 3DES, and NULL ciphers are insecure.',
+      detail: 'AEAD cipher suites (AES-GCM, ChaCha20-Poly1305) provide authenticated encryption. RC4, 3DES, and NULL ciphers are insecure and prohibited.',
       ref: 'NIST SP 800-52 Rev 2 §3.3.2',
     },
     {
-      label: 'Key Algorithm & Size',
+      label: 'Key Algorithm and Size',
       status: keyStatus(),
       value: c.keyAlgo,
       detail: c.keyAlgo.startsWith('ECDSA')
-        ? `ECDSA ${c.bits}-bit. Excellent choice — equivalent security to RSA ${c.bits * 12}-bit with much smaller key size.`
-        : c.bits >= 4096 ? `RSA ${c.bits}-bit. Exceeds NIST minimum of 2048-bit.`
-        : c.bits >= 2048 ? `RSA ${c.bits}-bit. Meets NIST minimum. Consider RSA 4096 or ECDSA P-256 for new certs.`
-        : `RSA ${c.bits}-bit. Below minimum. Replace immediately.`,
+        ? `ECDSA ${c.bits}-bit. Excellent choice, equivalent security to RSA ${c.bits * 12}-bit with a much smaller key size.`
+        : c.bits >= 4096 ? `RSA ${c.bits}-bit. Exceeds the NIST minimum of 2048-bit.`
+        : c.bits >= 2048 ? `RSA ${c.bits}-bit. Meets the NIST minimum. Consider RSA 4096 or ECDSA P-256 for new certificates.`
+        : `RSA ${c.bits}-bit. Below the NIST minimum. Replace immediately.`,
       ref: 'NIST SP 800-57 Pt1 / SP 800-186',
     },
     {
@@ -96,9 +97,9 @@ function buildTLSAudit(r: ScanResult): AuditItem[] {
       status: c.daysRemaining > 30 ? 'pass' : c.daysRemaining > 14 ? 'warn' : 'fail',
       value: c.daysRemaining > 0 ? `${c.daysRemaining} days remaining` : 'EXPIRED',
       detail: c.daysRemaining > 0
-        ? `Expires ${c.validTo}. Short-lived certificates (≤90 days) reduce the window of exposure on compromise.`
+        ? `Expires ${c.validTo}. Short-lived certificates (90 days or less) reduce the window of exposure on compromise.`
         : `Certificate expired on ${c.validTo}. Renew immediately.`,
-      ref: 'NIST SP 800-57 — short-lived credentials',
+      ref: 'NIST SP 800-57, short-lived credentials',
     },
     {
       label: 'Perfect Forward Secrecy',
@@ -106,7 +107,7 @@ function buildTLSAudit(r: ScanResult): AuditItem[] {
               : t.cipherName.includes('ECDHE') || t.cipherName.includes('DHE') ? 'pass' : 'fail',
       value: t.protocol === 'TLSv1.3' ? 'Enabled (TLS 1.3 mandates it)'
              : t.cipherName.includes('ECDHE') ? 'Enabled (ECDHE)' : 'Not enabled',
-      detail: 'Ephemeral key exchange ensures session keys cannot be recovered from the server private key, protecting past sessions.',
+      detail: 'Ephemeral key exchange ensures session keys cannot be recovered from the server private key, protecting past sessions from future compromise.',
       ref: 'NIST SP 800-52 Rev 2 §3.3.2',
     },
     {
@@ -114,9 +115,9 @@ function buildTLSAudit(r: ScanResult): AuditItem[] {
       status: c.hasOCSP ? 'pass' : c.hasCRL ? 'warn' : 'warn',
       value: c.hasOCSP ? `OCSP: ${c.ocspUrl}` : c.hasCRL ? 'CRL only (no OCSP)' : 'No revocation info',
       detail: c.hasOCSP
-        ? 'OCSP endpoint present. Enable OCSP stapling in nginx (ssl_stapling on) to speed up TLS handshakes.'
+        ? 'OCSP endpoint present. Enable OCSP stapling in nginx (ssl_stapling on) to speed up TLS handshakes and avoid client round-trips.'
         : c.hasCRL
-        ? 'Only CRL is available for revocation. CRL requires the client to download and parse the revocation list.'
+        ? 'Only CRL is available for revocation. CRL requires the client to download and parse the full revocation list.'
         : 'No revocation mechanism found. Compromised certificates cannot be quickly invalidated.',
       ref: 'NIST SP 800-52 Rev 2 §3.4',
     },
@@ -139,7 +140,7 @@ function buildHeaderAudit(h: ScanResult['headers']): AuditItem[] {
       status: h.csp ? 'pass' : 'fail',
       value: h.csp ? h.csp.substring(0, 60) + (h.csp.length > 60 ? '…' : '') : 'Not set',
       detail: h.csp
-        ? 'CSP present. Review policy strength — avoid unsafe-inline and unsafe-eval where possible.'
+        ? 'CSP present. Review policy strength; avoid unsafe-inline and unsafe-eval where possible.'
         : 'No CSP. This is the most impactful missing header. A CSP prevents XSS by restricting resource loading.',
       ref: 'OWASP CSP / NIST SP 800-95',
     },
@@ -170,14 +171,14 @@ function buildHeaderAudit(h: ScanResult['headers']): AuditItem[] {
       label: 'Permissions-Policy',
       status: h.permissionsPolicy ? 'pass' : 'warn',
       value: h.permissionsPolicy || 'Not set',
-      detail: 'Restricts access to browser APIs (camera, microphone, geolocation). Reduces attack surface.',
+      detail: 'Restricts access to browser APIs (camera, microphone, geolocation). Reduces the attack surface.',
       ref: 'W3C Permissions Policy',
     },
     {
       label: 'Cross-Origin-Opener-Policy',
       status: h.coop ? 'pass' : 'warn',
       value: h.coop || 'Not set',
-      detail: 'COOP isolates browsing context from cross-origin windows. Recommended: same-origin.',
+      detail: 'COOP isolates the browsing context from cross-origin windows. Recommended value: same-origin.',
       ref: 'HTML Living Standard',
     },
     {
@@ -185,8 +186,8 @@ function buildHeaderAudit(h: ScanResult['headers']): AuditItem[] {
       status: !h.server || h.server === 'nginx' ? 'pass' : 'warn',
       value: h.server || 'Not exposed',
       detail: !h.server
-        ? 'Server header not exposed. Good — reduces information leakage.'
-        : h.server.match(/\d+\.\d+/) ? 'Server header exposes version number. Remove with server_tokens off in nginx.'
+        ? 'Server header not exposed. Reduces information leakage.'
+        : h.server.match(/\d+\.\d+/) ? 'Server header exposes a version number. Remove it with server_tokens off in nginx.'
         : 'Server header present but without version. Consider removing entirely.',
       ref: 'OWASP Security Misconfiguration',
     },
@@ -231,98 +232,98 @@ function buildNISTAudit(r: ScanResult): AuditItem[] {
 
   return [
     {
-      label: 'SP 800-52 Rev 2 §3.3.1 — TLS Protocol Version',
+      label: 'SP 800-52 Rev 2 §3.3.1: TLS Protocol Version',
       status: t.protocol === 'TLSv1.3' ? 'pass' : t.protocol === 'TLSv1.2' ? 'warn' : 'fail',
       value: t.protocol,
       detail: t.protocol === 'TLSv1.3'
-        ? 'Compliant. TLS 1.3 is the NIST-preferred protocol — removes legacy handshake vulnerabilities and mandates AEAD and PFS by design.'
+        ? 'Compliant. TLS 1.3 is the NIST-preferred protocol, removing legacy handshake vulnerabilities while mandating AEAD and PFS by design.'
         : t.protocol === 'TLSv1.2'
         ? 'Conditionally compliant. TLS 1.2 is the NIST minimum. Configure ssl_protocols TLSv1.2 TLSv1.3 and prefer TLS 1.3 cipher suites.'
         : 'Non-compliant. TLS 1.0 and 1.1 are explicitly prohibited by NIST SP 800-52 Rev 2. Upgrade immediately.',
       ref: 'NIST SP 800-52 Rev 2 §3.3.1',
     },
     {
-      label: 'SP 800-52 Rev 2 §3.3.2 — Approved Cipher Suite',
+      label: 'SP 800-52 Rev 2 §3.3.2: Approved Cipher Suite',
       status: cipherStatus(),
       value: t.cipherStandard || t.cipherName,
       detail: 'NIST-approved suites (Table 3-5): TLS_AES_256_GCM_SHA384, TLS_AES_128_GCM_SHA256, TLS_CHACHA20_POLY1305_SHA256 (TLS 1.3); TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384, TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384 (TLS 1.2). RC4, 3DES, NULL, and export ciphers are prohibited.',
       ref: 'NIST SP 800-52 Rev 2 §3.3.2 Table 3-5',
     },
     {
-      label: 'SP 800-52 Rev 2 §3.3.2 — Perfect Forward Secrecy',
+      label: 'SP 800-52 Rev 2 §3.3.2: Perfect Forward Secrecy',
       status: t.protocol === 'TLSv1.3' ? 'pass'
               : t.cipherName.includes('ECDHE') || t.cipherName.includes('DHE') ? 'pass' : 'fail',
       value: t.protocol === 'TLSv1.3' ? 'Mandated by TLS 1.3'
              : t.cipherName.includes('ECDHE') ? 'ECDHE enabled'
              : t.cipherName.includes('DHE') ? 'DHE enabled' : 'Not enabled',
-      detail: 'NIST requires ephemeral (EC)DHE key exchange to ensure session keys cannot be recovered from a compromised server private key. Static RSA key exchange (no PFS) is prohibited. TLS 1.3 mandates PFS by design.',
+      detail: 'NIST requires ephemeral (EC)DHE key exchange to ensure session keys cannot be recovered from a compromised server private key. Static RSA key exchange is prohibited. TLS 1.3 mandates PFS by design.',
       ref: 'NIST SP 800-52 Rev 2 §3.3.2',
     },
     {
-      label: 'SP 800-57 Pt 1 §5.6 — Key Strength (2031+ Horizon)',
+      label: 'SP 800-57 Pt 1 §5.6: Key Strength (2031+ Horizon)',
       status: keyStatus(),
       value: c.keyAlgo,
       detail: (() => {
         const s = keyStatus()
         if (s === 'pass') return c.keyAlgo.startsWith('ECDSA')
-          ? `ECDSA ${c.bits}-bit provides ≥192-bit security. Meets NIST requirement for security through 2031 and beyond.`
+          ? `ECDSA ${c.bits}-bit provides 192-bit or more security. Meets the NIST requirement for security through 2031 and beyond.`
           : `RSA ${c.bits}-bit meets NIST key strength requirements for long-term security beyond 2030.`
         if (s === 'warn') return c.keyAlgo.startsWith('ECDSA')
           ? 'ECDSA P-256 is acceptable (128-bit security, adequate through 2030). Migrate to P-384 for certificates requiring security beyond 2030.'
           : 'RSA 2048-bit provides 112-bit security (adequate through 2030 only). Migrate to RSA 3072-bit or ECDSA P-256 for post-2030 security.'
-        return 'Key strength is below NIST minimums. Replace certificate immediately with RSA ≥2048-bit or ECDSA P-256.'
+        return 'Key strength is below NIST minimums. Replace the certificate immediately with RSA 2048-bit or higher, or ECDSA P-256.'
       })(),
       ref: 'NIST SP 800-57 Pt 1 Rev 5 §5.6.1 Table 2',
     },
     {
-      label: 'SP 800-186 §4 — ECDSA Approved Curve',
+      label: 'SP 800-186 §4: ECDSA Approved Curve',
       status: approvedCurve(),
-      value: c.keyAlgo.startsWith('ECDSA') ? `P-${c.bits} (secp${c.bits}r1)` : `N/A — ${c.keyAlgo}`,
+      value: c.keyAlgo.startsWith('ECDSA') ? `P-${c.bits} (secp${c.bits}r1)` : `N/A (${c.keyAlgo})`,
       detail: c.keyAlgo.startsWith('ECDSA')
         ? [256, 384, 521].includes(c.bits)
           ? `P-${c.bits} is a NIST-approved curve per SP 800-186. Provides ${c.bits === 256 ? '128' : c.bits === 384 ? '192' : '256'}-bit security. Brainpool, secp256k1, and X25519 are not approved for FIPS 140 use.`
           : `P-${c.bits} is not a NIST-approved curve. Use P-256 (secp256r1), P-384 (secp384r1), or P-521 (secp521r1).`
-        : 'Certificate uses RSA — NIST SP 800-186 elliptic curve requirements do not apply. Consider ECDSA for new certificates.',
+        : 'Certificate uses RSA; NIST SP 800-186 elliptic curve requirements do not apply. Consider ECDSA for new certificates.',
       ref: 'NIST SP 800-186 §4 / FIPS 186-5',
     },
     {
-      label: 'SP 800-57 §5.3.6 — Certificate Cryptoperiod',
+      label: 'SP 800-57 §5.3.6: Certificate Cryptoperiod',
       status: certAgeDays <= 90 ? 'pass' : certAgeDays <= 397 ? 'warn' : 'fail',
       value: `${Math.round(certAgeDays)}-day validity`,
       detail: certAgeDays <= 90
-        ? '≤90-day certificate. Aligns with NIST SP 800-57 short-lived credential guidance and CA/Browser Forum TM2024-001. Automate renewal via ACME (cert-manager, Certbot).'
+        ? 'Certificate is 90 days or shorter. Aligns with NIST SP 800-57 short-lived credential guidance and CA/Browser Forum TM2024-001. Automate renewal via ACME (cert-manager, Certbot).'
         : certAgeDays <= 397
-        ? 'Validity ≤397 days meets CA/Browser Forum Baseline §6.3.2. NIST SP 800-57 recommends shorter cryptoperiods to limit the window of exposure on key compromise.'
-        : 'Validity >397 days. CA/Browser Forum Baseline Requirements and NIST SP 800-57 require reissuance. Browsers and clients will reject certificates with validity over 398 days.',
+        ? 'Validity is 397 days or less, meeting CA/Browser Forum Baseline §6.3.2. NIST SP 800-57 recommends shorter cryptoperiods to limit the window of exposure on key compromise.'
+        : 'Validity exceeds 397 days. CA/Browser Forum Baseline Requirements and NIST SP 800-57 require reissuance. Browsers and clients will reject certificates with validity over 398 days.',
       ref: 'NIST SP 800-57 Pt 1 §5.3.6 / CA/B Forum BR §6.3.2',
     },
     {
-      label: 'SP 800-52 Rev 2 §3.4 — Certificate Revocation',
+      label: 'SP 800-52 Rev 2 §3.4: Certificate Revocation',
       status: c.hasOCSP ? 'pass' : c.hasCRL ? 'warn' : 'fail',
       value: c.hasOCSP ? `OCSP: ${c.ocspUrl}` : c.hasCRL ? 'CRL only' : 'None found',
       detail: c.hasOCSP
         ? 'OCSP endpoint present. NIST requires real-time revocation status. Enable OCSP stapling in nginx (ssl_stapling on; ssl_stapling_verify on;) to cache the response server-side and reduce client handshake latency.'
         : c.hasCRL
-        ? 'CRL-only revocation. NIST accepts CRL but recommends OCSP for lower latency. CRL downloads can be large and cached for hours — revocation propagation is delayed.'
+        ? 'CRL-only revocation. NIST accepts CRL but recommends OCSP for lower latency. CRL downloads can be large and cached for hours, delaying revocation propagation.'
         : 'No revocation mechanism found. NIST SP 800-52 Rev 2 §3.4 requires OCSP or CRL for all TLS certificates. A compromised certificate cannot be invalidated before expiry.',
       ref: 'NIST SP 800-52 Rev 2 §3.4',
     },
     {
-      label: 'SP 800-95 §6.2 — HSTS Transport Enforcement',
+      label: 'SP 800-95 §6.2: HSTS Transport Enforcement',
       status: hstsStatus(),
       value: h.hsts || 'Not set',
       detail: h.hsts
-        ? 'HSTS present. NIST SP 800-95 requires enforced transport security. Best practice: Strict-Transport-Security: max-age=31536000; includeSubDomains; preload — submit to the HSTS preload list to eliminate first-visit HTTP exposure.'
+        ? 'HSTS present. NIST SP 800-95 requires enforced transport security. Best practice: Strict-Transport-Security: max-age=31536000; includeSubDomains; preload. Submit to the HSTS preload list to eliminate first-visit HTTP exposure.'
         : 'HSTS not configured. NIST SP 800-95 §6.2 requires transport security enforcement. Without HSTS, clients are vulnerable to SSL stripping and protocol downgrade attacks on first connection.',
       ref: 'NIST SP 800-95 §6.2 / RFC 6797',
     },
     {
-      label: 'SP 800-95 §6.4 — Content Security Policy',
+      label: 'SP 800-95 §6.4: Content Security Policy',
       status: h.csp ? 'pass' : 'fail',
       value: h.csp ? 'Configured' : 'Not set',
       detail: h.csp
-        ? 'CSP present. NIST SP 800-95 §6.4 identifies web injection as critical. Review policy: avoid unsafe-inline and unsafe-eval — use script nonces or hashes instead. Verify no overly permissive origins (e.g., *).'
-        : 'No Content-Security-Policy. NIST SP 800-95 §6.4 identifies XSS as a critical web threat. CSP is the primary browser-enforced mitigation. Implement: default-src \'self\'; script-src \'self\' as a baseline.',
+        ? "CSP present. NIST SP 800-95 §6.4 identifies web injection as critical. Review policy: avoid unsafe-inline and unsafe-eval; use script nonces or hashes instead. Verify no overly permissive origins (e.g., *)."
+        : "No Content-Security-Policy. NIST SP 800-95 §6.4 identifies XSS as a critical web threat. CSP is the primary browser-enforced mitigation. Implement: default-src 'self'; script-src 'self' as a baseline.",
       ref: 'NIST SP 800-95 §6.4 / OWASP CSP Cheat Sheet',
     },
   ]
@@ -338,11 +339,11 @@ const NIST_REFS = [
     borderColor: 'border-mi-cyan/20',
     bgColor: 'bg-mi-cyan/5',
     items: [
-      'TLS 1.3 preferred — TLS 1.2 minimum; TLS 1.0/1.1 prohibited',
+      'TLS 1.3 preferred, TLS 1.2 minimum; TLS 1.0 and 1.1 prohibited',
       'AEAD cipher suites only: AES-GCM, ChaCha20-Poly1305',
       'Ephemeral (EC)DHE key exchange mandatory (Perfect Forward Secrecy)',
-      'OCSP or CRL revocation checking required for all certs',
-      'RSA ≥2048-bit or ECDSA P-256/P-384 minimum',
+      'OCSP or CRL revocation checking required for all certificates',
+      'RSA 2048-bit minimum or ECDSA P-256/P-384',
     ],
   },
   {
@@ -357,7 +358,7 @@ const NIST_REFS = [
       'RSA 2048-bit: 112-bit security, adequate through 2030 only',
       'RSA 3072-bit or ECDSA P-384: security beyond 2030',
       'Short cryptoperiods minimize compromise exposure window',
-      'Automate certificate renewal — ACME, cert-manager, Vault PKI',
+      'Automate certificate renewal with ACME, cert-manager, or Vault PKI',
     ],
   },
   {
@@ -370,9 +371,9 @@ const NIST_REFS = [
     bgColor: 'bg-spiffe/5',
     items: [
       'Approved curves: P-256 (128-bit), P-384 (192-bit), P-521 (256-bit)',
-      'Brainpool, secp256k1, X25519 — not approved for FIPS 140 use',
+      'Brainpool, secp256k1, and X25519 are not approved for FIPS 140 use',
       'ECDSA preferred over RSA: smaller keys, faster TLS handshakes',
-      'Use P-384+ for certificates requiring security beyond 2030',
+      'Use P-384 or higher for certificates requiring security beyond 2030',
     ],
   },
   {
@@ -386,8 +387,8 @@ const NIST_REFS = [
     items: [
       'HSTS: max-age=31536000; includeSubDomains; preload',
       'Content-Security-Policy to prevent XSS and injection',
-      'X-Content-Type-Options: nosniff (prevent MIME sniffing)',
-      'Remove Server version tokens — server_tokens off in nginx',
+      'X-Content-Type-Options: nosniff to prevent MIME sniffing',
+      'Remove Server version tokens using server_tokens off in nginx',
       'X-Frame-Options or CSP frame-ancestors for clickjacking defense',
     ],
   },
@@ -453,6 +454,7 @@ function AuditRow({ item, delay }: { item: AuditItem; delay: number }) {
 const EXAMPLES = ['github.com', 'cloudflare.com', 'google.com', 'expired.badssl.com']
 
 export default function TLSScanPage() {
+  const { t } = useTranslation()
   const [input, setInput]     = useState('')
   const [loading, setLoading] = useState(false)
   const [result, setResult]   = useState<ScanResult | null>(null)
@@ -499,11 +501,11 @@ export default function TLSScanPage() {
           className="text-center space-y-4"
         >
           <span className="badge bg-mi-cyan/10 text-mi-cyan border border-mi-cyan/20">
-            <Search size={11} className="mr-1.5" /> TLS Scanner
+            <Search size={11} className="mr-1.5" /> {t('tlsscan_page.badge')}
           </span>
-          <h1 className="text-4xl sm:text-5xl font-bold">Certificate & Security Scan</h1>
+          <h1 className="text-4xl sm:text-5xl font-bold">{t('tlsscan_page.title')}</h1>
           <p className="text-slate-400 max-w-xl mx-auto">
-            Enter any domain to inspect its TLS certificate, HTTP security headers, and get a full security audit — live from the server.
+            {t('tlsscan_page.subtitle')}
           </p>
         </motion.div>
 
@@ -523,7 +525,7 @@ export default function TLSScanPage() {
                 type="text"
                 value={input}
                 onChange={e => setInput(e.target.value)}
-                placeholder="example.com or https://example.com"
+                placeholder={t('tlsscan_page.placeholder')}
                 className="w-full bg-bg-card border border-border rounded-xl pl-9 pr-4 py-3 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-mi-cyan/50 focus:ring-1 focus:ring-mi-cyan/20 transition-colors"
                 autoComplete="off"
                 spellCheck={false}
@@ -535,13 +537,13 @@ export default function TLSScanPage() {
               className="flex items-center gap-2 px-5 py-3 rounded-xl bg-mi-cyan text-bg font-semibold text-sm hover:bg-mi-cyan/80 disabled:opacity-40 disabled:cursor-not-allowed transition-colors shrink-0"
             >
               {loading ? <Loader size={15} className="animate-spin" /> : <ArrowRight size={15} />}
-              {loading ? 'Scanning…' : 'Scan'}
+              {loading ? t('tlsscan_page.scanning') : t('tlsscan_page.scan')}
             </button>
           </form>
 
           {/* Example domains */}
           <div className="flex flex-wrap gap-2 items-center">
-            <span className="text-xs text-slate-600">Try:</span>
+            <span className="text-xs text-slate-600">{t('tlsscan_page.try')}</span>
             {EXAMPLES.map(ex => (
               <button
                 key={ex}
@@ -563,7 +565,7 @@ export default function TLSScanPage() {
             >
               <XCircle size={16} className="text-mi-red shrink-0 mt-0.5" />
               <div>
-                <p className="text-sm font-semibold text-mi-red">Scan failed</p>
+                <p className="text-sm font-semibold text-mi-red">{t('tlsscan_page.scan_failed')}</p>
                 <p className="text-xs text-slate-400 mt-0.5">{error}</p>
               </div>
             </motion.div>
@@ -584,7 +586,7 @@ export default function TLSScanPage() {
                 <div>
                   <h2 className="text-2xl font-bold text-mi-cyan">{result.domain}</h2>
                   <p className="text-xs text-slate-500 font-mono mt-0.5">
-                    Scanned {new Date(result.scannedAt).toLocaleString()}
+                    {t('tlsscan_page.scanned')} {new Date(result.scannedAt).toLocaleString()}
                   </p>
                 </div>
                 <div className={`text-4xl font-bold font-mono ${overallPct >= 80 ? 'text-spiffe' : overallPct >= 55 ? 'text-mi-gold' : 'text-mi-red'}`}>
@@ -594,33 +596,33 @@ export default function TLSScanPage() {
 
               {/* Score cards */}
               <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
-                <ScoreCard label="Overall"      pass={tlsScore.pass + hdrScore.pass} total={tlsScore.total + hdrScore.total} color={overallPct >= 80 ? 'text-spiffe' : overallPct >= 55 ? 'text-mi-gold' : 'text-mi-red'} />
-                <ScoreCard label="TLS / Cert"   pass={tlsScore.pass}  total={tlsScore.total}  color="text-mi-cyan" />
-                <ScoreCard label="HTTP Headers" pass={hdrScore.pass}  total={hdrScore.total}  color="text-mi-gold" />
-                <ScoreCard label="NIST Controls" pass={nistScore.pass} total={nistScore.total} color="text-spiffe" />
-                <ScoreCard label="Trusted CA"   pass={result.tls.trusted ? 1 : 0} total={1} color={result.tls.trusted ? 'text-spiffe' : 'text-mi-red'} />
+                <ScoreCard label={t('tlsscan_page.score_overall')} pass={tlsScore.pass + hdrScore.pass} total={tlsScore.total + hdrScore.total} color={overallPct >= 80 ? 'text-spiffe' : overallPct >= 55 ? 'text-mi-gold' : 'text-mi-red'} />
+                <ScoreCard label={t('tlsscan_page.score_tls')}     pass={tlsScore.pass}  total={tlsScore.total}  color="text-mi-cyan" />
+                <ScoreCard label={t('tlsscan_page.score_headers')} pass={hdrScore.pass}  total={hdrScore.total}  color="text-mi-gold" />
+                <ScoreCard label={t('tlsscan_page.score_nist')}    pass={nistScore.pass} total={nistScore.total} color="text-spiffe" />
+                <ScoreCard label={t('tlsscan_page.score_trusted')} pass={result.tls.trusted ? 1 : 0} total={1} color={result.tls.trusted ? 'text-spiffe' : 'text-mi-red'} />
               </div>
 
               {/* Certificate details */}
               <div className="space-y-4">
                 <h3 className="text-xl font-bold flex items-center gap-2">
-                  <FileText size={18} className="text-mi-cyan" /> Certificate Details
+                  <FileText size={18} className="text-mi-cyan" /> {t('tlsscan_page.cert_details')}
                 </h3>
                 <div className="rounded-xl border border-border overflow-hidden">
                   {[
-                    { icon: Globe,    label: 'Domain',             value: result.certificate.subjectCN },
-                    { icon: Globe,    label: 'Subject Alt Names',  value: result.certificate.sans.join(', ') },
-                    { icon: Shield,   label: 'Issuer',             value: result.certificate.issuer },
-                    { icon: Calendar, label: 'Valid From',         value: result.certificate.validFrom },
-                    { icon: Calendar, label: 'Valid Until',        value: `${result.certificate.validTo} (${result.certificate.daysRemaining} days)`, warn: result.certificate.daysRemaining < 30 },
-                    { icon: Key,      label: 'Public Key',         value: result.certificate.keyAlgo },
-                    { icon: Lock,     label: 'TLS Protocol',       value: result.tls.protocol },
-                    { icon: Lock,     label: 'Cipher Suite',       value: result.tls.cipherStandard },
-                    { icon: Hash,     label: 'Serial Number',      value: result.certificate.serial },
-                    { icon: Hash,     label: 'SHA-1 Fingerprint',  value: result.certificate.fingerprintSHA1 },
-                    { icon: Hash,     label: 'SHA-256 Fingerprint',value: result.certificate.fingerprintSHA256 },
-                    { icon: Info,     label: 'OCSP',               value: result.certificate.ocspUrl || 'Not available' },
-                    { icon: Info,     label: 'CRL',                value: result.certificate.hasCRL ? 'Present' : 'Not found' },
+                    { icon: Globe,    label: t('tlsscan_page.field_domain'),    value: result.certificate.subjectCN },
+                    { icon: Globe,    label: t('tlsscan_page.field_sans'),      value: result.certificate.sans.join(', ') },
+                    { icon: Shield,   label: t('tlsscan_page.field_issuer'),    value: result.certificate.issuer },
+                    { icon: Calendar, label: t('tlsscan_page.field_valid_from'),value: result.certificate.validFrom },
+                    { icon: Calendar, label: t('tlsscan_page.field_valid_until'),value: `${result.certificate.validTo} (${result.certificate.daysRemaining} days)`, warn: result.certificate.daysRemaining < 30 },
+                    { icon: Key,      label: t('tlsscan_page.field_pubkey'),    value: result.certificate.keyAlgo },
+                    { icon: Lock,     label: t('tlsscan_page.field_tls'),       value: result.tls.protocol },
+                    { icon: Lock,     label: t('tlsscan_page.field_cipher'),    value: result.tls.cipherStandard },
+                    { icon: Hash,     label: t('tlsscan_page.field_serial'),    value: result.certificate.serial },
+                    { icon: Hash,     label: t('tlsscan_page.field_sha1'),      value: result.certificate.fingerprintSHA1 },
+                    { icon: Hash,     label: t('tlsscan_page.field_sha256'),    value: result.certificate.fingerprintSHA256 },
+                    { icon: Info,     label: t('tlsscan_page.field_ocsp'),      value: result.certificate.ocspUrl || t('tlsscan_page.not_available') },
+                    { icon: Info,     label: t('tlsscan_page.field_crl'),       value: result.certificate.hasCRL ? t('tlsscan_page.present') : t('tlsscan_page.not_found') },
                   ].map((row, i) => {
                     const Icon = row.icon
                     return (
@@ -637,7 +639,7 @@ export default function TLSScanPage() {
               {/* TLS audit */}
               <div className="space-y-4">
                 <h3 className="text-xl font-bold flex items-center gap-2">
-                  <Shield size={18} className="text-mi-gold" /> TLS Security Audit
+                  <Shield size={18} className="text-mi-gold" /> {t('tlsscan_page.tls_audit')}
                 </h3>
                 <div className="space-y-2">
                   {tlsAudit.map((item, i) => <AuditRow key={i} item={item} delay={i * 0.04} />)}
@@ -647,16 +649,16 @@ export default function TLSScanPage() {
               {/* HTTP headers audit */}
               <div className="space-y-4">
                 <h3 className="text-xl font-bold flex items-center gap-2">
-                  <Server size={18} className="text-pki" /> HTTP Security Headers
+                  <Server size={18} className="text-pki" /> {t('tlsscan_page.headers_audit')}
                 </h3>
                 <div className="rounded-xl border border-border overflow-hidden">
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="border-b border-border bg-bg-muted/50">
                         <th className="w-8 px-4 py-3"></th>
-                        <th className="text-left px-4 py-3 text-slate-400 font-semibold">Header</th>
-                        <th className="text-left px-4 py-3 text-slate-400 font-semibold hidden md:table-cell">Value</th>
-                        <th className="text-left px-4 py-3 text-slate-400 font-semibold w-16">Status</th>
+                        <th className="text-left px-4 py-3 text-slate-400 font-semibold">{t('tlsscan_page.col_header')}</th>
+                        <th className="text-left px-4 py-3 text-slate-400 font-semibold hidden md:table-cell">{t('tlsscan_page.col_value')}</th>
+                        <th className="text-left px-4 py-3 text-slate-400 font-semibold w-16">{t('tlsscan_page.col_status')}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -680,7 +682,7 @@ export default function TLSScanPage() {
 
               {/* Raw header values (mobile fallback) */}
               <div className="md:hidden space-y-2">
-                <p className="text-xs text-slate-600 font-mono uppercase tracking-widest">Raw header values</p>
+                <p className="text-xs text-slate-600 font-mono uppercase tracking-widest">{t('tlsscan_page.raw_headers')}</p>
                 {Object.entries(result.headers).map(([k, v]) => v ? (
                   <div key={k} className="flex gap-2 text-xs">
                     <span className="text-slate-500 shrink-0 w-32 truncate font-mono">{k}</span>
@@ -693,10 +695,10 @@ export default function TLSScanPage() {
               <div className="space-y-4">
                 <div>
                   <h3 className="text-xl font-bold flex items-center gap-2">
-                    <BookOpen size={18} className="text-spiffe" /> NIST Compliance Assessment
+                    <BookOpen size={18} className="text-spiffe" /> {t('tlsscan_page.nist_audit')}
                   </h3>
                   <p className="text-xs text-slate-500 mt-1">
-                    Mapping scan results against NIST SP 800-52 Rev 2, SP 800-57, SP 800-186, and SP 800-95.
+                    {t('tlsscan_page.nist_audit_desc')}
                   </p>
                 </div>
                 <div className="space-y-2">
@@ -706,12 +708,12 @@ export default function TLSScanPage() {
 
               {/* Scan again nudge */}
               <div className="section-card flex items-center justify-between gap-4 flex-wrap">
-                <p className="text-sm text-slate-400">Want to scan another domain?</p>
+                <p className="text-sm text-slate-400">{t('tlsscan_page.new_scan_prompt')}</p>
                 <button
                   onClick={() => { setResult(null); setInput(''); window.scrollTo({ top: 0, behavior: 'smooth' }) }}
                   className="flex items-center gap-2 text-sm text-mi-cyan hover:text-mi-cyan/80 transition-colors font-semibold"
                 >
-                  New scan <ArrowRight size={14} />
+                  {t('tlsscan_page.new_scan')} <ArrowRight size={14} />
                 </button>
               </div>
 
@@ -726,19 +728,19 @@ export default function TLSScanPage() {
             className="text-center py-16 space-y-3"
           >
             <Lock size={40} className="text-border mx-auto" />
-            <p className="text-slate-600 text-sm">Enter a domain above to start the scan</p>
-            <p className="text-slate-700 text-xs font-mono">Inspects TLS certificate, cipher suite, and all HTTP security headers</p>
+            <p className="text-slate-600 text-sm">{t('tlsscan_page.idle_hint')}</p>
+            <p className="text-slate-700 text-xs font-mono">{t('tlsscan_page.idle_sub')}</p>
           </motion.div>
         )}
 
-        {/* NIST Reference Guides — always visible */}
+        {/* NIST Reference Guides */}
         <div className="space-y-6 pt-8 border-t border-border">
           <div>
             <h2 className="text-xl font-bold flex items-center gap-2">
-              <BookOpen size={18} className="text-spiffe" /> NIST Reference Guides
+              <BookOpen size={18} className="text-spiffe" /> {t('tlsscan_page.nist_refs')}
             </h2>
             <p className="text-xs text-slate-500 mt-1">
-              Key NIST publications governing TLS, key management, and web security — applied by this scanner.
+              {t('tlsscan_page.nist_refs_desc')}
             </p>
           </div>
           <div className="grid sm:grid-cols-2 gap-4">
@@ -755,7 +757,7 @@ export default function TLSScanPage() {
                     target="_blank"
                     rel="noopener noreferrer"
                     className={`${ref.color} opacity-60 hover:opacity-100 transition-opacity shrink-0 mt-0.5`}
-                    title="Open NIST document"
+                    title={t('tlsscan_page.open_nist')}
                   >
                     <ExternalLink size={13} />
                   </a>
