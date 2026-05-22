@@ -23,7 +23,9 @@
     "flow": "Fluxo SPIFFE",
     "flow_sub": "Diagrama passo a passo de emissão de SVID",
     "compare": "Comparar Abordagens",
-    "compare_sub": "Comparação lado a lado de métodos de identidade"
+    "compare_sub": "Comparação lado a lado de métodos de identidade",
+    "tlsscan": "Scanner TLS",
+    "tlsscan_sub": "Auditoria ao vivo de certificado e segurança para qualquer domínio"
   },
   "hero": {
     "eyebrow": "Segurança de Identidade de Máquina · SPIFFE/SPIRE · X.509 · mTLS · Zero Trust",

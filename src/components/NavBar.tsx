@@ -27,8 +27,9 @@ const TECHNOLOGIES: DropItem[] = [
 ]
 
 const TOOLS: DropItem[] = [
-  { to: '/flow',    labelKey: 'nav.flow',    subKey: 'nav.flow_sub',    color: 'text-mi-gold' },
-  { to: '/compare', labelKey: 'nav.compare', subKey: 'nav.compare_sub', color: 'text-mi-cyan' },
+  { to: '/flow',     labelKey: 'nav.flow',     subKey: 'nav.flow_sub',     color: 'text-mi-gold' },
+  { to: '/compare',  labelKey: 'nav.compare',  subKey: 'nav.compare_sub',  color: 'text-mi-cyan' },
+  { to: '/tls-scan', labelKey: 'nav.tlsscan',  subKey: 'nav.tlsscan_sub',  color: 'text-spiffe'  },
 ]
 
 const dropVariants = {

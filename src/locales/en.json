@@ -23,7 +23,9 @@
     "flow": "SPIFFE Flow",
     "flow_sub": "Step-by-step SVID issuance diagram",
     "compare": "Compare Approaches",
-    "compare_sub": "Side-by-side identity method comparison"
+    "compare_sub": "Side-by-side identity method comparison",
+    "tlsscan": "TLS Scanner",
+    "tlsscan_sub": "Live certificate & security audit for any domain"
   },
   "hero": {
     "eyebrow": "Machine Identity Security · SPIFFE/SPIRE · X.509 · mTLS · Zero Trust",

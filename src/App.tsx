@@ -13,6 +13,7 @@ import KubernetesPage from './pages/KubernetesPage'
 import FlowPage from './pages/FlowPage'
 import ComparePage from './pages/ComparePage'
 import CertInfoPage from './pages/CertInfoPage'
+import TLSScanPage from './pages/TLSScanPage'
 
 function ScrollToTop() {
   const { pathname } = useLocation()
@@ -49,6 +50,7 @@ export default function App() {
           <Route path="/flow"        element={<FlowPage />}      />
           <Route path="/compare"     element={<ComparePage />}   />
           <Route path="/cert-info"   element={<CertInfoPage />}  />
+          <Route path="/tls-scan"    element={<TLSScanPage />}   />
         </Route>
       </Routes>
     </Router>
