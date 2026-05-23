@@ -27,7 +27,9 @@
     "tlsscan": "TLS Scanner",
     "tlsscan_sub": "Live certificate & security audit for any domain",
     "certmgr": "Certificate Manager",
-    "certmgr_sub": "Lifecycle, best practices, and automation tools"
+    "certmgr_sub": "Lifecycle, best practices, and automation tools",
+    "clm": "CLM Dashboard",
+    "clm_sub": "Live certificate inventory from your Venafi tenant"
   },
   "hero": {
     "eyebrow": "Machine Identity Security · SPIFFE/SPIRE · X.509 · mTLS · Zero Trust",

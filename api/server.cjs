@@ -156,9 +156,42 @@ function buildResponse(hostname, certData, headers, trusted) {
   }
 }
 
+// Proxy request to Venafi Cloud API (only api.venafi.cloud allowed)
+function venafiFetch(apiKey, path, method, body) {
+  return new Promise((resolve, reject) => {
+    const safePath = path.startsWith('/') ? path : '/' + path
+    const postData = body ? JSON.stringify(body) : null
+    const options = {
+      hostname: 'api.venafi.cloud',
+      port: 443,
+      path: safePath,
+      method: method || 'GET',
+      headers: {
+        'tppl-api-key': apiKey,
+        'Accept': 'application/json',
+        'User-Agent': 'MachineIdentityExplainer/1.0',
+        ...(postData ? {
+          'Content-Type': 'application/json',
+          'Content-Length': Buffer.byteLength(postData),
+        } : {}),
+      },
+    }
+    const req = https.request(options, (res) => {
+      let data = ''
+      res.on('data', chunk => { data += chunk })
+      res.on('end', () => resolve({ status: res.statusCode, body: data }))
+    })
+    req.setTimeout(30000, () => { req.destroy(); reject(new Error('Venafi API timed out')) })
+    req.on('error', reject)
+    if (postData) req.write(postData)
+    req.end()
+  })
+}
+
 const server = http.createServer(async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*')
-  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS')
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
   res.setHeader('Content-Type', 'application/json')
 
   if (req.method === 'OPTIONS') {
@@ -171,6 +204,46 @@ const server = http.createServer(async (req, res) => {
   try { url = new URL(req.url, 'http://localhost') } catch {
     res.writeHead(400)
     res.end(JSON.stringify({ error: 'Invalid request URL' }))
+    return
+  }
+
+  // ── Venafi Cloud proxy ────────────────────────────────────────────────────
+  if (url.pathname === '/venafi' && req.method === 'POST') {
+    let rawBody = ''
+    req.on('data', chunk => { rawBody += chunk })
+    req.on('end', async () => {
+      try {
+        const { apiKey, path, method = 'GET', body } = JSON.parse(rawBody)
+
+        // Validate API key: UUID pattern (8-4-4-4-12 hex)
+        if (!apiKey || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(apiKey)) {
+          res.writeHead(400)
+          res.end(JSON.stringify({ error: 'Invalid API key format' }))
+          return
+        }
+
+        // Only allow Venafi Cloud v1 API paths
+        if (!path || typeof path !== 'string' || !path.startsWith('/v1/')) {
+          res.writeHead(400)
+          res.end(JSON.stringify({ error: 'Path must start with /v1/' }))
+          return
+        }
+
+        // Reject any path traversal attempts
+        if (path.includes('..') || path.includes('//')) {
+          res.writeHead(400)
+          res.end(JSON.stringify({ error: 'Invalid path' }))
+          return
+        }
+
+        const result = await venafiFetch(apiKey, path, method, body)
+        res.writeHead(result.status, { 'Content-Type': 'application/json' })
+        res.end(result.body)
+      } catch (e) {
+        res.writeHead(500)
+        res.end(JSON.stringify({ error: e.message }))
+      }
+    })
     return
   }
 

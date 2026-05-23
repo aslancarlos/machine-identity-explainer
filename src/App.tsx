@@ -15,6 +15,7 @@ import ComparePage from './pages/ComparePage'
 import CertInfoPage from './pages/CertInfoPage'
 import TLSScanPage from './pages/TLSScanPage'
 import CertManagerPage from './pages/CertManagerPage'
+import CLMPage from './pages/CLMPage'
 
 function ScrollToTop() {
   const { pathname } = useLocation()
@@ -53,6 +54,7 @@ export default function App() {
           <Route path="/cert-info"   element={<CertInfoPage />}  />
           <Route path="/tls-scan"       element={<TLSScanPage />}      />
           <Route path="/cert-manager"   element={<CertManagerPage />}  />
+          <Route path="/clm"            element={<CLMPage />}          />
         </Route>
       </Routes>
     </Router>
