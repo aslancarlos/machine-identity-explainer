@@ -1,5 +1,7 @@
 # machine-identity-explainer
 
+[![build](https://github.com/aslancarlos/machine-identity-explainer/actions/workflows/build.yml/badge.svg)](https://github.com/aslancarlos/machine-identity-explainer/actions/workflows/build.yml) [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
+
 Interactive single-page application that walks through the core building blocks of **Machine Identity Security**: SPIFFE, SPIRE, X.509 SVIDs, JWT SVIDs, mTLS, and the zero-trust workload identity model that underpins modern cloud-native security.
 
 Live at: `https://demo.minha.cloud/machine-identity/`
