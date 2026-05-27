@@ -1,0 +1,58 @@
+# machine-identity-explainer
+
+Interactive single-page application that walks through the core building blocks of **Machine Identity Security**: SPIFFE, SPIRE, X.509 SVIDs, JWT SVIDs, mTLS, and the zero-trust workload identity model that underpins modern cloud-native security.
+
+Live at: `https://demo.minha.cloud/machine-identity/`
+
+---
+
+## What this demonstrates
+
+Machine identity is the next decade's identity problem. Every workload, service, CI runner, and AI agent needs to authenticate to other workloads — without long-lived API keys, shared secrets, or human intervention. This explainer covers the foundational patterns:
+
+| Concept | What it shows |
+|---|---|
+| SPIFFE IDs | Universal naming scheme for workloads across clouds, K8s, and VMs |
+| SPIRE Server / Agent | How identity is attested and issued at runtime |
+| X.509 SVIDs | Short-lived certificates as workload credentials |
+| JWT SVIDs | JWT-based alternative for HTTP and message-bus workloads |
+| mTLS | Mutual authentication based on workload identity, not network location |
+| Trust Domains | Federation between organizations and clouds |
+
+Each section is interactive — you can step through attestation flows, inspect certificate contents, and see how a workload moves from "no identity" to "fully attested and authorized" without ever touching a static secret.
+
+## Why this matters
+
+The industry has spent two decades hardening human identity (SSO, MFA, conditional access). Machine identity is roughly where human identity was in 2010: long-lived credentials, broad scope, weak rotation, and very little observability. SPIFFE/SPIRE is one of the open foundations for closing that gap, alongside cloud-native primitives like IRSA, Workload Identity Federation, and Conjur `authn-jwt`.
+
+## Running locally
+
+```bash
+npm install
+npm run dev
+```
+
+Then open `http://localhost:5173`.
+
+## Building / Docker
+
+```bash
+npm run build
+docker build -t machine-identity-explainer .
+docker run -p 8080:8080 machine-identity-explainer
+```
+
+## Tech stack
+
+- **Vite + React + TypeScript** for the SPA
+- **Tailwind CSS** for styling
+- **Nginx** as the production server (in the Docker image)
+
+## Related projects
+
+- [conjur-explainer](https://github.com/aslancarlos/conjur-explainer) — Same explainer pattern, focused on CyberArk Conjur Cloud
+- [k8s-eso-shop](https://github.com/aslancarlos/k8s-eso-shop) — End-to-end demo of External Secrets Operator on K8s
+
+## License
+
+Apache License 2.0 — see [LICENSE](LICENSE).
