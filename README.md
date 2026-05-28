@@ -2,9 +2,11 @@
 
 [![build](https://github.com/aslancarlos/machine-identity-explainer/actions/workflows/build.yml/badge.svg)](https://github.com/aslancarlos/machine-identity-explainer/actions/workflows/build.yml) [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 
-Interactive single-page application that walks through the core building blocks of **Machine Identity Security**: SPIFFE, SPIRE, X.509 SVIDs, JWT SVIDs, mTLS, and the zero-trust workload identity model that underpins modern cloud-native security.
+Interactive single-page application that walks through the core building blocks of **Machine Identity Security**: SPIFFE, SPIRE, X.509 SVIDs, JWT SVIDs, mTLS, and the zero-trust workload identity model that underpins modern cloud-native security. Companion to the [IDIRA Secrets Manager demos](https://demo.minha.cloud).
 
-Live at: `https://demo.minha.cloud/machine-identity/`
+> **2026-05-27 — rebrand & theme** · Visual language now follows [paloaltonetworks.com/idira](https://www.paloaltonetworks.com/idira): Onest typography + IBM Plex Mono, IDIRA palette, **dark + light theme** with user toggle in the nav (persists to `localStorage`, falls back to `prefers-color-scheme`). Skip-to-content link, visible focus rings, and `prefers-reduced-motion` support (WCAG 2.4.1 / 2.3.3). See [`src/lib/useTheme.ts`](src/lib/useTheme.ts) and [`src/components/ThemeToggle.tsx`](src/components/ThemeToggle.tsx).
+
+Live at: `https://machine.minha.cloud/`
 
 ---
 
