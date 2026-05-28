@@ -135,7 +135,7 @@
         "severity": "high",
         "title": "Zombie Identities",
         "desc": "Decommissioned workloads leave behind service accounts, API keys, and certificates that remain valid for months. Attackers compromise abandoned infrastructure and pivot into live environments using orphaned credentials.",
-        "example": "42% of service accounts in enterprises are never deprovisioned (CyberArk 2023)"
+        "example": "42% of service accounts in enterprises are never deprovisioned (IDIRA 2023)"
       },
       {
         "icon": "shuffle",
@@ -240,7 +240,7 @@
       { "layer": "Identity Issuance",  "color": "mi-gold",  "tech": "SPIRE / cert-manager",    "desc": "Issues short-lived X.509 SVIDs to every workload automatically." },
       { "layer": "Authentication",     "color": "mi-cyan",  "tech": "SPIFFE / mTLS",           "desc": "Every service-to-service call is mutually authenticated using the SVID." },
       { "layer": "Authorization",      "color": "spiffe",   "tech": "OPA / RBAC / Istio",      "desc": "Policy engine validates the caller's SPIFFE ID against the resource's access policy." },
-      { "layer": "Secret Access",      "color": "pki",      "tech": "Vault / Conjur / ASM",    "desc": "Workload presents SVID to secret store to retrieve dynamic credentials — no static secrets." },
+      { "layer": "Secret Access",      "color": "pki",      "tech": "Vault / Secrets Manager / ASM",    "desc": "Workload presents SVID to secret store to retrieve dynamic credentials — no static secrets." },
       { "layer": "Observability",      "color": "k8s",      "tech": "SPIRE telemetry / SIEM",  "desc": "Every certificate issuance, rotation, and revocation event is logged and auditable." }
     ]
   },

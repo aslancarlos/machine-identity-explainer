@@ -135,7 +135,7 @@
         "severity": "high",
         "title": "Identidades Zombie",
         "desc": "Las cargas de trabajo desmanteladas dejan cuentas de servicio, claves de API y certificados válidos durante meses. Los atacantes comprometen infraestructura abandonada.",
-        "example": "42% de las cuentas de servicio en empresas nunca se desaprovisionan (CyberArk 2023)"
+        "example": "42% de las cuentas de servicio en empresas nunca se desaprovisionan (IDIRA 2023)"
       },
       {
         "icon": "shuffle",
@@ -240,7 +240,7 @@
       { "layer": "Emisión de Identidad", "color": "mi-gold", "tech": "SPIRE / cert-manager", "desc": "Emite SVIDs X.509 de corta duración para cada carga de trabajo automáticamente." },
       { "layer": "Autenticación",        "color": "mi-cyan", "tech": "SPIFFE / mTLS",        "desc": "Cada llamada servicio-a-servicio está mutuamente autenticada usando el SVID." },
       { "layer": "Autorización",         "color": "spiffe",  "tech": "OPA / RBAC / Istio",   "desc": "El motor de políticas valida el SPIFFE ID del llamador contra la política de acceso al recurso." },
-      { "layer": "Acceso a Secretos",    "color": "pki",     "tech": "Vault / Conjur / ASM",  "desc": "La carga de trabajo presenta SVID al almacén de secretos para recuperar credenciales dinámicas." },
+      { "layer": "Acceso a Secretos",    "color": "pki",     "tech": "Vault / Secrets Manager / ASM",  "desc": "La carga de trabajo presenta SVID al almacén de secretos para recuperar credenciales dinámicas." },
       { "layer": "Observabilidad",       "color": "k8s",     "tech": "Telemetría SPIRE / SIEM","desc": "Cada evento de emisión, rotación y revocación de certificado se registra y es auditable." }
     ]
   },

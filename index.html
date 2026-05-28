@@ -4,19 +4,35 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Machine Identity Security</title>
+    <title>Machine Identity Security · IDIRA · LATAM Lab</title>
     <meta
       name="description"
-      content="Interactive explainer for Machine Identity Security — SPIFFE/SPIRE, X.509 certificates, mTLS, and zero-trust workload identity patterns."
+      content="Interactive explainer for Machine Identity Security — SPIFFE/SPIRE, X.509 certificates, mTLS, and zero-trust workload identity patterns. Companion to the IDIRA Secrets Manager demos."
     />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Onest:wght@300;400;500;600;700;800;900&family=IBM+Plex+Mono:wght@400;500;600&display=swap"
       rel="stylesheet"
     />
+
+    <!-- Theme init: applied before paint to avoid flash of wrong theme -->
+    <script>
+      (function () {
+        try {
+          var saved = localStorage.getItem('idira-theme');
+          var theme = saved || (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+          document.documentElement.dataset.theme = theme;
+          document.documentElement.classList.toggle('dark', theme === 'dark');
+        } catch (e) {
+          document.documentElement.dataset.theme = 'dark';
+          document.documentElement.classList.add('dark');
+        }
+      })();
+    </script>
   </head>
   <body>
+    <a href="#main" class="skip-link">Skip to main content</a>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

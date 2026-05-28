@@ -135,7 +135,7 @@
         "severity": "high",
         "title": "Identidades Zumbis",
         "desc": "Workloads desativados deixam service accounts, chaves de API e certificados válidos por meses. Atacantes comprometem infraestrutura abandonada e pivotam para ambientes ativos.",
-        "example": "42% das service accounts em empresas nunca são desprovisionadas (CyberArk 2023)"
+        "example": "42% das service accounts em empresas nunca são desprovisionadas (IDIRA 2023)"
       },
       {
         "icon": "shuffle",
@@ -240,7 +240,7 @@
       { "layer": "Emissão de Identidade", "color": "mi-gold", "tech": "SPIRE / cert-manager", "desc": "Emite SVIDs X.509 de curta duração para todo workload automaticamente." },
       { "layer": "Autenticação",          "color": "mi-cyan", "tech": "SPIFFE / mTLS",        "desc": "Toda chamada serviço-a-serviço é mutuamente autenticada usando o SVID." },
       { "layer": "Autorização",           "color": "spiffe",  "tech": "OPA / RBAC / Istio",   "desc": "Motor de política valida o SPIFFE ID do chamador contra a política de acesso ao recurso." },
-      { "layer": "Acesso a Segredos",     "color": "pki",     "tech": "Vault / Conjur / ASM",  "desc": "Workload apresenta SVID ao secret store para recuperar credenciais dinâmicas." },
+      { "layer": "Acesso a Segredos",     "color": "pki",     "tech": "Vault / Secrets Manager / ASM",  "desc": "Workload apresenta SVID ao secret store para recuperar credenciais dinâmicas." },
       { "layer": "Observabilidade",       "color": "k8s",     "tech": "Telemetria SPIRE / SIEM","desc": "Todo evento de emissão, rotação e revogação de certificado é registrado e auditável." }
     ]
   },
