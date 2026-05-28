@@ -32,14 +32,27 @@
     "clm_sub": "Live certificate inventory from your Venafi tenant"
   },
   "hero": {
-    "eyebrow": "Machine Identity Security · SPIFFE/SPIRE · X.509 · mTLS · Zero Trust",
+    "eyebrow": "Open standards · CNCF graduated · in production",
     "title": "Every Machine",
     "titleAccent": "Needs an Identity",
     "subtitle": "From containers and microservices to CI/CD pipelines and IoT devices — machine identity is the foundation of zero-trust security. Learn how X.509 certificates, SPIFFE/SPIRE, and mutual TLS protect modern infrastructure at scale.",
     "cta_spiffe": "SPIFFE Flow",
     "cta_compare": "Compare Approaches",
     "cta_k8s": "K8s Identity",
-    "cta_explore": "Explore concepts ↓"
+    "cta_explore": "Explore concepts ↓",
+    "logoStripLabel": "Open primitives referenced in this tour",
+    "stat1_unit": "concepts",
+    "stat1_label": "SPIFFE · SPIRE · X.509 · JWT · mTLS · TD",
+    "stat2_unit": "trust domain",
+    "stat2_label": "latamlab.minha.cloud",
+    "stat3_unit": "long-lived",
+    "stat3_label": "Bootstrap tokens, shared passwords",
+    "stat4_unit": "attestable",
+    "stat4_label": "Process / workload identities issued at runtime",
+    "promise_eyebrow": "The promise",
+    "promise_claim_pre": "Trust the workload,",
+    "promise_claim_mark": "not the network.",
+    "promise_detail": "Network location is not identity. IP allow-lists rot. VPNs hide breaches. Machine identity built on SPIFFE moves the trust boundary into the workload itself — short-lived, attested, auditable, federated."
   },
   "problem": {
     "badge": "The Problem",
@@ -94,21 +107,69 @@
     "subtitle": "A machine identity is a cryptographic credential that proves who — or what — a digital entity is, without human involvement.",
     "types_title": "Types of machines that need identities",
     "types": [
-      { "icon": "container", "label": "Containers & Pods",      "desc": "Every pod in Kubernetes needs a verifiable identity to authenticate with other services, APIs, and secret stores — without embedding credentials." },
-      { "icon": "server",    "label": "Virtual Machines",        "desc": "Cloud VMs running applications or agents must prove their identity to cloud APIs, vaults, and inter-service communications." },
-      { "icon": "cpu",       "label": "CI/CD Pipelines",         "desc": "GitHub Actions, Jenkins, and GitLab CI runners need identities to access secrets, registries, and deployment targets — without storing long-lived tokens." },
-      { "icon": "wifi",      "label": "IoT & Edge Devices",       "desc": "Embedded devices and edge nodes require lightweight certificates to authenticate with cloud backends and maintain secure firmware update channels." },
-      { "icon": "code",      "label": "Serverless Functions",     "desc": "Lambda, Cloud Functions, and Azure Functions need short-lived identity tokens to call downstream APIs without static API keys." },
-      { "icon": "git",       "label": "Service Accounts",         "desc": "Kubernetes service accounts, AWS IAM roles, and GCP service accounts form the IAM layer for machine-to-machine access control." }
+      {
+        "icon": "container",
+        "label": "Containers & Pods",
+        "desc": "Every pod in Kubernetes needs a verifiable identity to authenticate with other services, APIs, and secret stores — without embedding credentials."
+      },
+      {
+        "icon": "server",
+        "label": "Virtual Machines",
+        "desc": "Cloud VMs running applications or agents must prove their identity to cloud APIs, vaults, and inter-service communications."
+      },
+      {
+        "icon": "cpu",
+        "label": "CI/CD Pipelines",
+        "desc": "GitHub Actions, Jenkins, and GitLab CI runners need identities to access secrets, registries, and deployment targets — without storing long-lived tokens."
+      },
+      {
+        "icon": "wifi",
+        "label": "IoT & Edge Devices",
+        "desc": "Embedded devices and edge nodes require lightweight certificates to authenticate with cloud backends and maintain secure firmware update channels."
+      },
+      {
+        "icon": "code",
+        "label": "Serverless Functions",
+        "desc": "Lambda, Cloud Functions, and Azure Functions need short-lived identity tokens to call downstream APIs without static API keys."
+      },
+      {
+        "icon": "git",
+        "label": "Service Accounts",
+        "desc": "Kubernetes service accounts, AWS IAM roles, and GCP service accounts form the IAM layer for machine-to-machine access control."
+      }
     ],
     "vs_title": "Machine identity vs. human identity",
     "vs_items": [
-      { "aspect": "Lifecycle",      "human": "Years (employee tenure)",           "machine": "Hours to days (workload lifetime)" },
-      { "aspect": "Scale",          "human": "Thousands of users",                "machine": "Millions of workloads" },
-      { "aspect": "Rotation",       "human": "Manual (90-day password policy)",    "machine": "Automatic (every 1–24 hours)" },
-      { "aspect": "Credential",     "human": "Password + MFA",                    "machine": "X.509 cert / SVID / JWT" },
-      { "aspect": "Revocation",     "human": "IT ticket → AD disable",            "machine": "Stop issuing SVIDs → immediate" },
-      { "aspect": "Audit",          "human": "SIEM logs",                         "machine": "Certificate transparency + SPIRE telemetry" }
+      {
+        "aspect": "Lifecycle",
+        "human": "Years (employee tenure)",
+        "machine": "Hours to days (workload lifetime)"
+      },
+      {
+        "aspect": "Scale",
+        "human": "Thousands of users",
+        "machine": "Millions of workloads"
+      },
+      {
+        "aspect": "Rotation",
+        "human": "Manual (90-day password policy)",
+        "machine": "Automatic (every 1–24 hours)"
+      },
+      {
+        "aspect": "Credential",
+        "human": "Password + MFA",
+        "machine": "X.509 cert / SVID / JWT"
+      },
+      {
+        "aspect": "Revocation",
+        "human": "IT ticket → AD disable",
+        "machine": "Stop issuing SVIDs → immediate"
+      },
+      {
+        "aspect": "Audit",
+        "human": "SIEM logs",
+        "machine": "Certificate transparency + SPIRE telemetry"
+      }
     ]
   },
   "threats": {
@@ -166,19 +227,59 @@
     "subtitle": "X.509 certificates provide cryptographically verifiable identity for machines. Understanding the lifecycle — from issuance to revocation — is essential to securing any modern infrastructure.",
     "lifecycle_title": "Certificate Lifecycle",
     "lifecycle": [
-      { "step": "1", "label": "Generate",  "desc": "Create a private key and CSR (Certificate Signing Request) for the workload. The private key never leaves the workload." },
-      { "step": "2", "label": "Issue",     "desc": "The Certificate Authority signs the CSR, binding the public key to the workload's identity (subject name, SANs, validity period)." },
-      { "step": "3", "label": "Distribute","desc": "The signed certificate is delivered securely to the workload. In SPIFFE/SPIRE, the Agent handles this over a local Unix socket." },
-      { "step": "4", "label": "Use",       "desc": "The workload presents the certificate in TLS handshakes. mTLS uses both sides' certificates for mutual authentication." },
-      { "step": "5", "label": "Rotate",    "desc": "Before expiry, the workload requests a new certificate. SPIRE automates rotation (default: renew at 50% of lifetime)." },
-      { "step": "6", "label": "Revoke",    "desc": "On decommission or compromise, the certificate is added to the CRL or OCSP is queried. SPIFFE handles this by simply not issuing new SVIDs." }
+      {
+        "step": "1",
+        "label": "Generate",
+        "desc": "Create a private key and CSR (Certificate Signing Request) for the workload. The private key never leaves the workload."
+      },
+      {
+        "step": "2",
+        "label": "Issue",
+        "desc": "The Certificate Authority signs the CSR, binding the public key to the workload's identity (subject name, SANs, validity period)."
+      },
+      {
+        "step": "3",
+        "label": "Distribute",
+        "desc": "The signed certificate is delivered securely to the workload. In SPIFFE/SPIRE, the Agent handles this over a local Unix socket."
+      },
+      {
+        "step": "4",
+        "label": "Use",
+        "desc": "The workload presents the certificate in TLS handshakes. mTLS uses both sides' certificates for mutual authentication."
+      },
+      {
+        "step": "5",
+        "label": "Rotate",
+        "desc": "Before expiry, the workload requests a new certificate. SPIRE automates rotation (default: renew at 50% of lifetime)."
+      },
+      {
+        "step": "6",
+        "label": "Revoke",
+        "desc": "On decommission or compromise, the certificate is added to the CRL or OCSP is queried. SPIFFE handles this by simply not issuing new SVIDs."
+      }
     ],
     "tools_title": "Automation tools",
     "tools": [
-      { "name": "cert-manager",   "color": "k8s",   "desc": "Kubernetes-native certificate controller. Integrates with Let's Encrypt, Vault, and custom CAs." },
-      { "name": "SPIRE",          "color": "spiffe", "desc": "CNCF project for automated SVID issuance. Issues X.509 and JWT SVIDs with short lifetimes." },
-      { "name": "HashiCorp Vault", "color": "mi-gold","desc": "PKI secrets engine for dynamic certificate issuance with configurable TTLs and CRL." },
-      { "name": "Venafi",         "color": "pki",    "desc": "Enterprise platform for machine identity management across cloud, on-prem, and edge." }
+      {
+        "name": "cert-manager",
+        "color": "k8s",
+        "desc": "Kubernetes-native certificate controller. Integrates with Let's Encrypt, Vault, and custom CAs."
+      },
+      {
+        "name": "SPIRE",
+        "color": "spiffe",
+        "desc": "CNCF project for automated SVID issuance. Issues X.509 and JWT SVIDs with short lifetimes."
+      },
+      {
+        "name": "HashiCorp Vault",
+        "color": "mi-gold",
+        "desc": "PKI secrets engine for dynamic certificate issuance with configurable TTLs and CRL."
+      },
+      {
+        "name": "Venafi",
+        "color": "pki",
+        "desc": "Enterprise platform for machine identity management across cloud, on-prem, and edge."
+      }
     ]
   },
   "spiffe": {
@@ -188,10 +289,26 @@
     "svid_title": "What is an SVID?",
     "svid_desc": "A SPIFFE Verifiable Identity Document (SVID) is either an X.509 certificate or a JWT that carries the workload's SPIFFE ID in the Subject Alternative Name field. The SPIFFE ID is a URI of the form spiffe://trust-domain/path — making identity portable across clouds and clusters.",
     "benefits": [
-      { "icon": "shield",  "title": "No secrets in workloads",    "desc": "Workloads receive SVIDs via a local Unix socket. No credentials are passed through environment variables, Kubernetes secrets, or config files." },
-      { "icon": "clock",   "title": "Short-lived by default",      "desc": "SVIDs have a 1-hour lifetime by default. Compromise of a cert gives an attacker < 1 hour before it expires and is never renewed." },
-      { "icon": "layers",  "title": "Platform agnostic",           "desc": "Works on bare metal, VMs, containers, and serverless. Attestation plugins support AWS, GCP, Azure, Docker, and Kubernetes." },
-      { "icon": "refresh", "title": "Automatic rotation",          "desc": "The SPIRE Agent monitors SVID expiry and transparently renews certificates without any action from the workload." }
+      {
+        "icon": "shield",
+        "title": "No secrets in workloads",
+        "desc": "Workloads receive SVIDs via a local Unix socket. No credentials are passed through environment variables, Kubernetes secrets, or config files."
+      },
+      {
+        "icon": "clock",
+        "title": "Short-lived by default",
+        "desc": "SVIDs have a 1-hour lifetime by default. Compromise of a cert gives an attacker < 1 hour before it expires and is never renewed."
+      },
+      {
+        "icon": "layers",
+        "title": "Platform agnostic",
+        "desc": "Works on bare metal, VMs, containers, and serverless. Attestation plugins support AWS, GCP, Azure, Docker, and Kubernetes."
+      },
+      {
+        "icon": "refresh",
+        "title": "Automatic rotation",
+        "desc": "The SPIRE Agent monitors SVID expiry and transparently renews certificates without any action from the workload."
+      }
     ],
     "attestation_title": "Workload Attestation",
     "attestation_desc": "SPIRE verifies workload identity by inspecting kernel-level data — the calling process's UID, GID, binary SHA-256, pod labels, or Kubernetes service account. This prevents a workload from lying about its own identity.",
@@ -203,27 +320,87 @@
     "subtitle": "Standard TLS verifies the server to the client. Mutual TLS (mTLS) adds client authentication — both parties present X.509 certificates, creating a cryptographic handshake that replaces passwords, API keys, and network-level trust.",
     "handshake_title": "The mTLS handshake",
     "handshake": [
-      { "step": "1", "label": "Client Hello",      "desc": "Client sends supported cipher suites and TLS version." },
-      { "step": "2", "label": "Server Certificate","desc": "Server sends its X.509 certificate. Client verifies against trust bundle." },
-      { "step": "3", "label": "Client Certificate","desc": "Server requests client certificate. Client sends its SVID." },
-      { "step": "4", "label": "Certificate Verify","desc": "Both sides verify each other's certs against the SPIFFE trust bundle." },
-      { "step": "5", "label": "Session Keys",      "desc": "Both derive symmetric session keys. Encrypted channel established." },
-      { "step": "6", "label": "Mutual Auth Done",  "desc": "Both identities are verified. Traffic flows over an encrypted, mutually authenticated channel." }
+      {
+        "step": "1",
+        "label": "Client Hello",
+        "desc": "Client sends supported cipher suites and TLS version."
+      },
+      {
+        "step": "2",
+        "label": "Server Certificate",
+        "desc": "Server sends its X.509 certificate. Client verifies against trust bundle."
+      },
+      {
+        "step": "3",
+        "label": "Client Certificate",
+        "desc": "Server requests client certificate. Client sends its SVID."
+      },
+      {
+        "step": "4",
+        "label": "Certificate Verify",
+        "desc": "Both sides verify each other's certs against the SPIFFE trust bundle."
+      },
+      {
+        "step": "5",
+        "label": "Session Keys",
+        "desc": "Both derive symmetric session keys. Encrypted channel established."
+      },
+      {
+        "step": "6",
+        "label": "Mutual Auth Done",
+        "desc": "Both identities are verified. Traffic flows over an encrypted, mutually authenticated channel."
+      }
     ],
     "vs_title": "TLS vs mTLS",
     "vs": [
-      { "aspect": "Who authenticates", "tls": "Server only",          "mtls": "Both client and server" },
-      { "aspect": "Credential",        "tls": "Server certificate",   "mtls": "Both sides' X.509 certs" },
-      { "aspect": "Use case",          "tls": "Browser → web server", "mtls": "Service → service (east-west)" },
-      { "aspect": "Attack resistance", "tls": "Server impersonation", "mtls": "Both impersonation + MITM" },
-      { "aspect": "Password needed?",  "tls": "Often yes (APIs)",     "mtls": "No — cert IS the credential" }
+      {
+        "aspect": "Who authenticates",
+        "tls": "Server only",
+        "mtls": "Both client and server"
+      },
+      {
+        "aspect": "Credential",
+        "tls": "Server certificate",
+        "mtls": "Both sides' X.509 certs"
+      },
+      {
+        "aspect": "Use case",
+        "tls": "Browser → web server",
+        "mtls": "Service → service (east-west)"
+      },
+      {
+        "aspect": "Attack resistance",
+        "tls": "Server impersonation",
+        "mtls": "Both impersonation + MITM"
+      },
+      {
+        "aspect": "Password needed?",
+        "tls": "Often yes (APIs)",
+        "mtls": "No — cert IS the credential"
+      }
     ],
     "enforcement_title": "Enforcing mTLS in Kubernetes",
     "enforcement": [
-      { "tool": "Istio",         "color": "mi-cyan",  "desc": "Service mesh with automatic mTLS for all east-west traffic via Envoy sidecar proxies." },
-      { "tool": "Linkerd",       "color": "spiffe",   "desc": "Lightweight service mesh using Rust-based micro-proxies. Transparent mTLS with SPIFFE SVIDs." },
-      { "tool": "SPIRE + SPIFFE","color": "mi-gold",  "desc": "Workload identity layer that other service meshes consume. Direct mTLS without a full mesh." },
-      { "tool": "Cilium",        "color": "pki",      "desc": "eBPF-based networking with mTLS enforcement at the kernel layer. No sidecar needed." }
+      {
+        "tool": "Istio",
+        "color": "mi-cyan",
+        "desc": "Service mesh with automatic mTLS for all east-west traffic via Envoy sidecar proxies."
+      },
+      {
+        "tool": "Linkerd",
+        "color": "spiffe",
+        "desc": "Lightweight service mesh using Rust-based micro-proxies. Transparent mTLS with SPIFFE SVIDs."
+      },
+      {
+        "tool": "SPIRE + SPIFFE",
+        "color": "mi-gold",
+        "desc": "Workload identity layer that other service meshes consume. Direct mTLS without a full mesh."
+      },
+      {
+        "tool": "Cilium",
+        "color": "pki",
+        "desc": "eBPF-based networking with mTLS enforcement at the kernel layer. No sidecar needed."
+      }
     ]
   },
   "zerotrust": {
@@ -231,17 +408,54 @@
     "title": "Never trust, always verify — for every machine",
     "subtitle": "Zero Trust replaces network-perimeter security with identity-based access. Machine identity is the core primitive: every workload must prove who it is before accessing any resource, regardless of where it runs.",
     "principles": [
-      { "icon": "shield",  "title": "Verify Explicitly",      "desc": "Authenticate every workload, every time. No implicit trust based on network location, IP address, or VLAN membership." },
-      { "icon": "lock",    "title": "Least Privilege Access", "desc": "Each machine gets only the permissions it needs for its current task. Short-lived credentials enforce this — you cannot hoard access." },
-      { "icon": "eye",     "title": "Assume Breach",          "desc": "Design as if an attacker is already inside. mTLS, short-lived SVIDs, and continuous attestation limit blast radius when something goes wrong." }
+      {
+        "icon": "shield",
+        "title": "Verify Explicitly",
+        "desc": "Authenticate every workload, every time. No implicit trust based on network location, IP address, or VLAN membership."
+      },
+      {
+        "icon": "lock",
+        "title": "Least Privilege Access",
+        "desc": "Each machine gets only the permissions it needs for its current task. Short-lived credentials enforce this — you cannot hoard access."
+      },
+      {
+        "icon": "eye",
+        "title": "Assume Breach",
+        "desc": "Design as if an attacker is already inside. mTLS, short-lived SVIDs, and continuous attestation limit blast radius when something goes wrong."
+      }
     ],
     "stack_title": "The Zero Trust machine identity stack",
     "stack": [
-      { "layer": "Identity Issuance",  "color": "mi-gold",  "tech": "SPIRE / cert-manager",    "desc": "Issues short-lived X.509 SVIDs to every workload automatically." },
-      { "layer": "Authentication",     "color": "mi-cyan",  "tech": "SPIFFE / mTLS",           "desc": "Every service-to-service call is mutually authenticated using the SVID." },
-      { "layer": "Authorization",      "color": "spiffe",   "tech": "OPA / RBAC / Istio",      "desc": "Policy engine validates the caller's SPIFFE ID against the resource's access policy." },
-      { "layer": "Secret Access",      "color": "pki",      "tech": "Vault / Secrets Manager / ASM",    "desc": "Workload presents SVID to secret store to retrieve dynamic credentials — no static secrets." },
-      { "layer": "Observability",      "color": "k8s",      "tech": "SPIRE telemetry / SIEM",  "desc": "Every certificate issuance, rotation, and revocation event is logged and auditable." }
+      {
+        "layer": "Identity Issuance",
+        "color": "mi-gold",
+        "tech": "SPIRE / cert-manager",
+        "desc": "Issues short-lived X.509 SVIDs to every workload automatically."
+      },
+      {
+        "layer": "Authentication",
+        "color": "mi-cyan",
+        "tech": "SPIFFE / mTLS",
+        "desc": "Every service-to-service call is mutually authenticated using the SVID."
+      },
+      {
+        "layer": "Authorization",
+        "color": "spiffe",
+        "tech": "OPA / RBAC / Istio",
+        "desc": "Policy engine validates the caller's SPIFFE ID against the resource's access policy."
+      },
+      {
+        "layer": "Secret Access",
+        "color": "pki",
+        "tech": "Vault / Secrets Manager / ASM",
+        "desc": "Workload presents SVID to secret store to retrieve dynamic credentials — no static secrets."
+      },
+      {
+        "layer": "Observability",
+        "color": "k8s",
+        "tech": "SPIRE telemetry / SIEM",
+        "desc": "Every certificate issuance, rotation, and revocation event is logged and auditable."
+      }
     ]
   },
   "kubernetes": {
@@ -291,22 +505,107 @@
     "badge": "Approach Comparison",
     "title": "Machine identity methods side by side",
     "subtitle": "Not all machine identity approaches are equal. Compare the security posture, operational overhead, and scalability of each.",
-    "methods": ["Static Keys", "K8s SA Tokens", "SPIFFE/SPIRE", "mTLS + PKI"],
+    "methods": [
+      "Static Keys",
+      "K8s SA Tokens",
+      "SPIFFE/SPIRE",
+      "mTLS + PKI"
+    ],
     "criteria": [
-      { "label": "No secrets in workload",  "values": [false,  "partial", true,   true  ] },
-      { "label": "Short-lived credentials", "values": [false,  true,      true,   "opt" ] },
-      { "label": "Automatic rotation",      "values": [false,  true,      true,   true  ] },
-      { "label": "Mutual authentication",   "values": [false,  false,     true,   true  ] },
-      { "label": "Cloud agnostic",          "values": [true,   false,     true,   true  ] },
-      { "label": "Works without a mesh",    "values": [true,   true,      true,   false ] },
-      { "label": "Revocation speed",        "values": ["slow", "fast",    "fast", "fast"] },
-      { "label": "Ops complexity",          "values": ["low",  "medium",  "high", "high"] }
+      {
+        "label": "No secrets in workload",
+        "values": [
+          false,
+          "partial",
+          true,
+          true
+        ]
+      },
+      {
+        "label": "Short-lived credentials",
+        "values": [
+          false,
+          true,
+          true,
+          "opt"
+        ]
+      },
+      {
+        "label": "Automatic rotation",
+        "values": [
+          false,
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "label": "Mutual authentication",
+        "values": [
+          false,
+          false,
+          true,
+          true
+        ]
+      },
+      {
+        "label": "Cloud agnostic",
+        "values": [
+          true,
+          false,
+          true,
+          true
+        ]
+      },
+      {
+        "label": "Works without a mesh",
+        "values": [
+          true,
+          true,
+          true,
+          false
+        ]
+      },
+      {
+        "label": "Revocation speed",
+        "values": [
+          "slow",
+          "fast",
+          "fast",
+          "fast"
+        ]
+      },
+      {
+        "label": "Ops complexity",
+        "values": [
+          "low",
+          "medium",
+          "high",
+          "high"
+        ]
+      }
     ],
     "best_for": [
-      { "method": "Static Keys",    "color": "mi-red",  "use": "Legacy systems and quick prototypes only. Never production." },
-      { "method": "K8s SA Tokens",  "color": "k8s",     "use": "Cloud provider federation (AWS IRSA, GCP WI). Good for cloud API access." },
-      { "method": "SPIFFE/SPIRE",   "color": "mi-gold", "use": "Greenfield microservice platforms. Best-in-class for east-west identity." },
-      { "method": "mTLS + PKI",     "color": "pki",     "use": "Enterprises with existing PKI. Full control over certificate policy." }
+      {
+        "method": "Static Keys",
+        "color": "mi-red",
+        "use": "Legacy systems and quick prototypes only. Never production."
+      },
+      {
+        "method": "K8s SA Tokens",
+        "color": "k8s",
+        "use": "Cloud provider federation (AWS IRSA, GCP WI). Good for cloud API access."
+      },
+      {
+        "method": "SPIFFE/SPIRE",
+        "color": "mi-gold",
+        "use": "Greenfield microservice platforms. Best-in-class for east-west identity."
+      },
+      {
+        "method": "mTLS + PKI",
+        "color": "pki",
+        "use": "Enterprises with existing PKI. Full control over certificate policy."
+      }
     ]
   },
   "footer": {
@@ -469,5 +768,11 @@
     "col_header": "Header",
     "col_value": "Value",
     "col_status": "Status"
+  },
+  "promise": {
+    "eyebrow": "The promise",
+    "claim_pre": "Trust the workload,",
+    "claim_mark": "not the network.",
+    "detail": "Network location is not identity. IP allow-lists rot. VPNs hide breaches. Machine identity built on SPIFFE moves the trust boundary into the workload itself — short-lived, attested, auditable, federated."
   }
 }
