@@ -5,8 +5,6 @@
 Interactive single-page application that walks through the core building blocks of **Machine Identity Security**: SPIFFE, SPIRE, X.509 SVIDs, JWT SVIDs, mTLS, and the zero-trust workload identity model that underpins modern cloud-native security. Companion to the [IDIRA Secrets Manager demos](https://demo.minha.cloud).
 
 > **2026-05-27 — rebrand & theme** · Visual language now follows [paloaltonetworks.com/idira](https://www.paloaltonetworks.com/idira): Onest typography + IBM Plex Mono, IDIRA palette, **dark + light theme** with user toggle in the nav (persists to `localStorage`, falls back to `prefers-color-scheme`). Skip-to-content link, visible focus rings, and `prefers-reduced-motion` support (WCAG 2.4.1 / 2.3.3). See [`src/lib/useTheme.ts`](src/lib/useTheme.ts) and [`src/components/ThemeToggle.tsx`](src/components/ThemeToggle.tsx).
-> 
-> Full design + UX + theme docs: [`removed`](removed).
 
 Live at: `https://machine.minha.cloud/`
 
