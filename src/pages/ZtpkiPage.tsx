@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   ShieldX, Search, Loader, KeyRound, Eye, EyeOff, AlertTriangle,
-  Ban, RefreshCw, X, Info,
+  Ban, RefreshCw, X, Info, Clock,
 } from 'lucide-react'
 
 // ── Types (from ZTPKI swagger) ───────────────────────────────────────────────
@@ -70,6 +70,11 @@ export default function ZtpkiPage() {
   const [certs, setCerts] = useState<CertItem[] | null>(null)
   const [count, setCount] = useState(0)
 
+  // recently issued (last 24h)
+  const [recent, setRecent] = useState<CertItem[] | null>(null)
+  const [recentLoading, setRecentLoading] = useState(false)
+  const [recentErr, setRecentErr] = useState<string | null>(null)
+
   // revoke modal
   const [target, setTarget] = useState<CertItem | null>(null)
   const [reason, setReason] = useState<number>(1)
@@ -102,10 +107,29 @@ export default function ZtpkiPage() {
       const data: CertList = await ztpki('/certificates/', 'POST', payload)
       setCerts(data.items || [])
       setCount(data.count ?? (data.items?.length || 0))
+      loadRecent() // refresh the "issued in last 24h" panel with the same creds
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Request failed')
     } finally {
       setLoading(false)
+    }
+  }
+
+  async function loadRecent() {
+    if (!hawkId.trim() || !hawkKey) { setRecentErr(t('ztpki_page.need_creds')); return }
+    setRecentErr(null); setRecentLoading(true)
+    try {
+      const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+      const data: CertList = await ztpki('/certificates/', 'POST', { created_since: since, limit: 50 })
+      const items = (data.items || [])
+        .slice()
+        .sort((a, b) => new Date(b.notBefore || 0).getTime() - new Date(a.notBefore || 0).getTime())
+        .slice(0, 5)
+      setRecent(items)
+    } catch (err: unknown) {
+      setRecentErr(err instanceof Error ? err.message : 'Request failed')
+    } finally {
+      setRecentLoading(false)
     }
   }
 
@@ -272,6 +296,57 @@ export default function ZtpkiPage() {
           )}
         </div>
       )}
+
+      {/* Recently issued (last 24h) */}
+      <div className="bg-bg-card border border-border rounded-2xl overflow-hidden mt-6">
+        <div className="px-5 py-3 border-b border-border flex items-center justify-between gap-3">
+          <div>
+            <div className="text-sm font-semibold text-text flex items-center gap-2">
+              <Clock size={15} className="text-mi-cyan" /> {t('ztpki_page.recent_title')}
+            </div>
+            <div className="text-xs text-text-muted mt-0.5">{t('ztpki_page.recent_sub')}</div>
+          </div>
+          <button onClick={loadRecent} disabled={recentLoading}
+            className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg border border-border text-text-2 hover:bg-bg-muted disabled:opacity-50 transition-colors shrink-0">
+            {recentLoading ? <Loader size={13} className="animate-spin" /> : <RefreshCw size={13} />}
+            {recentLoading ? t('ztpki_page.recent_loading') : t('ztpki_page.recent_load')}
+          </button>
+        </div>
+        {recentErr ? (
+          <div className="px-5 py-4 text-sm text-mi-red break-words">{recentErr}</div>
+        ) : recent === null ? (
+          <div className="px-5 py-8 text-center text-text-muted text-sm">{t('ztpki_page.recent_hint')}</div>
+        ) : recent.length === 0 ? (
+          <div className="px-5 py-8 text-center text-text-muted text-sm">{t('ztpki_page.recent_empty')}</div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-border bg-bg-muted/50 text-left text-xs uppercase tracking-wide text-text-muted">
+                  <th className="px-4 py-2.5 font-semibold">{t('ztpki_page.col_cn')}</th>
+                  <th className="px-4 py-2.5 font-semibold">{t('ztpki_page.col_serial')}</th>
+                  <th className="px-4 py-2.5 font-semibold">{t('ztpki_page.recent_issued')}</th>
+                  <th className="px-4 py-2.5 font-semibold">{t('ztpki_page.col_status')}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {recent.map((c, i) => (
+                  <tr key={c.id} className={`border-b border-border/50 ${i % 2 ? 'bg-bg' : 'bg-bg-card'}`}>
+                    <td className="px-4 py-2.5 text-text font-medium">{c.commonName || '—'}</td>
+                    <td className="px-4 py-2.5 font-mono text-xs text-text-2 break-all max-w-[12rem]">{c.serial || '—'}</td>
+                    <td className="px-4 py-2.5 text-text-2">{fmtDate(c.notBefore)}</td>
+                    <td className="px-4 py-2.5">
+                      <span className={`inline-block text-[11px] font-semibold px-2 py-0.5 rounded border ${statusStyle(c.revocationStatus)}`}>
+                        {c.revocationStatus || '—'}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
 
       {/* Revoke confirmation modal */}
       <AnimatePresence>

@@ -566,6 +566,13 @@
     "revoke_warning": "A revogação é permanente e não pode ser desfeita. O certificado será publicado como revogado na CRL/OCSP.",
     "cancel": "Cancelar",
     "confirm_revoke": "Revogar certificado",
-    "revoking": "Revogando…"
+    "revoking": "Revogando…",
+    "recent_title": "Emitidos nas últimas 24h",
+    "recent_sub": "Os 5 certificados emitidos mais recentemente",
+    "recent_load": "Carregar",
+    "recent_loading": "Carregando…",
+    "recent_hint": "Informe suas credenciais HAWK e clique em Carregar (ou faça uma busca).",
+    "recent_empty": "Nenhum certificado emitido nas últimas 24 horas.",
+    "recent_issued": "Emitido"
   }
 }

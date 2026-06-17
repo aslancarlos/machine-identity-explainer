@@ -566,6 +566,13 @@
     "revoke_warning": "Revocation is permanent and cannot be undone. The certificate will be published as revoked on the CRL/OCSP.",
     "cancel": "Cancel",
     "confirm_revoke": "Revoke certificate",
-    "revoking": "Revoking…"
+    "revoking": "Revoking…",
+    "recent_title": "Issued in the last 24h",
+    "recent_sub": "The 5 most recently issued certificates",
+    "recent_load": "Load",
+    "recent_loading": "Loading…",
+    "recent_hint": "Enter your HAWK credentials and click Load (or run a search).",
+    "recent_empty": "No certificates issued in the last 24 hours.",
+    "recent_issued": "Issued"
   }
 }
