@@ -33,6 +33,7 @@ const TOOLS: DropItem[] = [
   { to: '/tls-scan',      labelKey: 'nav.tlsscan',   subKey: 'nav.tlsscan_sub',   color: 'text-spiffe'  },
   { to: '/cert-manager',  labelKey: 'nav.certmgr',   subKey: 'nav.certmgr_sub',   color: 'text-pki'     },
   { to: '/clm',           labelKey: 'nav.clm',       subKey: 'nav.clm_sub',       color: 'text-mi-gold' },
+  { to: '/scep',          labelKey: 'nav.scep',      subKey: 'nav.scep_sub',      color: 'text-mtls'    },
 ]
 
 const dropVariants = {

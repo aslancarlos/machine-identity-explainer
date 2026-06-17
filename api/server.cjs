@@ -4,6 +4,7 @@ const http  = require('http')
 const https = require('https')
 const tls   = require('tls')
 const { URL } = require('url')
+const scep  = require('./scep.cjs')
 
 const PORT    = 3001
 const TIMEOUT = 10000
@@ -30,6 +31,72 @@ function parseHostname(raw) {
     return u.hostname
   } catch {
     return null
+  }
+}
+
+// ── SCEP input validation ────────────────────────────────────────────────────
+const MAX_FIELD = 256
+const isStr = (v, max = MAX_FIELD) => typeof v === 'string' && v.length > 0 && v.length <= max
+const strArr = (v, max = 32) =>
+  Array.isArray(v) ? v.filter(x => isStr(x)).slice(0, max) : []
+
+function validateScepInput(b) {
+  if (!b || typeof b !== 'object') return 'Invalid request body'
+  if (b.mode !== 'user' && b.mode !== 'machine') return 'mode must be "user" or "machine"'
+  if (!isStr(b.url, 2048)) return 'url is required'
+
+  // Scheme allow-list: only http(s). Reject file:, gopher:, ftp:, etc.
+  let parsed
+  try { parsed = new URL(b.url.includes('://') ? b.url : 'https://' + b.url) }
+  catch { return `Invalid SCEP url: ${b.url}` }
+  if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+    return 'SCEP url must use http or https'
+  }
+  // SSRF guard (fast literal pre-check; scep.cjs additionally resolves the
+  // hostname, rejects private resolved IPs, and pins the address per request).
+  if (isPrivateHost(parsed.hostname)) {
+    return 'Private/internal SCEP addresses are not allowed by this public proxy'
+  }
+  if (!isStr(b.challenge, 2048)) return 'challenge is required'
+
+  const s = b.subject || {}
+  if (!isStr(s.CN)) return 'subject.CN (Common Name) is required'
+  for (const k of ['O', 'OU', 'C', 'ST', 'L', 'email']) {
+    if (s[k] !== undefined && s[k] !== '' && !isStr(s[k])) return `subject.${k} is invalid`
+  }
+  if (b.keyBits !== undefined && ![2048, 3072, 4096].includes(b.keyBits)) {
+    return 'keyBits must be one of 2048, 3072, 4096'
+  }
+  return null
+}
+
+function buildScepOptions(b) {
+  const s = b.subject || {}
+  const subject = {
+    CN: s.CN.trim(),
+    O:  isStr(s.O)  ? s.O.trim()  : undefined,
+    OU: isStr(s.OU) ? s.OU.trim() : undefined,
+    C:  isStr(s.C)  ? s.C.trim()  : undefined,
+    ST: isStr(s.ST) ? s.ST.trim() : undefined,
+    L:  isStr(s.L)  ? s.L.trim()  : undefined,
+    email: isStr(s.email) ? s.email.trim() : undefined,
+  }
+  const sIn = b.sans || {}
+  const sans = {
+    dns:   strArr(sIn.dns),
+    email: strArr(sIn.email),
+    ip:    strArr(sIn.ip),
+    uri:   strArr(sIn.uri),
+    upn:   strArr(sIn.upn),
+  }
+  return {
+    url: b.url.trim(),
+    challenge: b.challenge,
+    caIdent: isStr(b.caIdent) ? b.caIdent : undefined,
+    keyBits: b.keyBits || 2048,
+    insecureTLS: b.insecureTLS === true,
+    subject,
+    sans,
   }
 }
 
@@ -242,6 +309,41 @@ const server = http.createServer(async (req, res) => {
       } catch (e) {
         res.writeHead(500)
         res.end(JSON.stringify({ error: e.message }))
+      }
+    })
+    return
+  }
+
+  // ── SCEP enrolment ─────────────────────────────────────────────────────────
+  if (url.pathname === '/scep' && req.method === 'POST') {
+    let rawBody = ''
+    let tooBig = false
+    req.on('data', chunk => {
+      rawBody += chunk
+      if (rawBody.length > 64 * 1024) { tooBig = true; req.destroy() }
+    })
+    req.on('end', async () => {
+      if (tooBig) {
+        res.writeHead(413)
+        res.end(JSON.stringify({ error: 'Request body too large' }))
+        return
+      }
+      try {
+        const body = JSON.parse(rawBody)
+        const errs = validateScepInput(body)
+        if (errs) {
+          res.writeHead(400)
+          res.end(JSON.stringify({ error: errs }))
+          return
+        }
+        const result = await scep.enroll(buildScepOptions(body))
+        // Never log keys or challenge; only the per-request result is returned.
+        const httpStatus = result.status === 'FAILURE' ? 502 : 200
+        res.writeHead(httpStatus)
+        res.end(JSON.stringify(result))
+      } catch (e) {
+        res.writeHead(502)
+        res.end(JSON.stringify({ error: e.message || 'SCEP enrolment failed' }))
       }
     })
     return

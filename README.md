@@ -29,6 +29,23 @@ Each section is interactive — you can step through attestation flows, inspect 
 
 The industry has spent two decades hardening human identity (SSO, MFA, conditional access). Machine identity is roughly where human identity was in 2010: long-lived credentials, broad scope, weak rotation, and very little observability. SPIFFE/SPIRE is one of the open foundations for closing that gap, alongside cloud-native primitives like IRSA, Workload Identity Federation, and Conjur `authn-jwt`.
 
+## Live SCEP enrollment
+
+The `/scep` tool requests a real certificate from any SCEP server (RFC 8894) —
+Venafi, Microsoft NDES, EJBCA, etc. Supply the SCEP URL and challenge password,
+then enrol as a **machine** (CN = FQDN, DNS SANs) or a **user** (CN = name, email
+/ UPN SANs). The full exchange — `GetCACaps`, `GetCACert`, RSA keygen, PKCS#10
+CSR, the signed/enveloped `PKCSReq` pkiMessage, `PKIOperation`, and decrypt of the
+issued cert — runs server-side in `api/scep.cjs` (pure Node.js + `node-forge`).
+
+Keys, CSR, and the challenge are never persisted or logged server-side. The
+public-facing proxy resolves the target host and refuses private/internal
+addresses (SSRF guard), and verifies the endpoint's TLS by default (an explicit
+per-request opt-in is required to skip it for private/self-signed CAs).
+
+> The API server (`api/server.cjs`) now depends on `node-forge`; run `npm install`
+> wherever it is deployed and restart the `mi-scan-api` service.
+
 ## Running locally
 
 ```bash
