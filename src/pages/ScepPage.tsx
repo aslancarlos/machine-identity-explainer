@@ -97,6 +97,7 @@ export default function ScepPage() {
 
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [errorLog, setErrorLog] = useState<string[] | null>(null)
   const [result, setResult] = useState<ScepResult | null>(null)
 
   const splitList = (s: string) => s.split(/[\s,;]+/).map(x => x.trim()).filter(Boolean)
@@ -104,6 +105,7 @@ export default function ScepPage() {
   async function submit(e: React.FormEvent) {
     e.preventDefault()
     setError(null)
+    setErrorLog(null)
     setResult(null)
 
     const subject: Record<string, string> = { CN: cn.trim() }
@@ -143,6 +145,7 @@ export default function ScepPage() {
       const data = await res.json()
       if (!res.ok && !data.status) {
         setError(data.error || `Request failed (HTTP ${res.status})`)
+        setErrorLog(Array.isArray(data.log) ? data.log : null)
       } else {
         setResult(data)
       }
@@ -323,9 +326,19 @@ export default function ScepPage() {
           <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
             className="mt-6 flex items-start gap-3 rounded-xl border border-mi-red/40 bg-mi-red/10 p-4">
             <ShieldAlert size={20} className="text-mi-red shrink-0" />
-            <div>
+            <div className="min-w-0">
               <div className="font-semibold text-mi-red">{t('scep_page.failed')}</div>
-              <div className="text-sm text-text-2 mt-0.5">{error}</div>
+              <div className="text-sm text-text-2 mt-0.5 break-words">{error}</div>
+              {errorLog && errorLog.length > 0 && (
+                <details className="mt-3">
+                  <summary className="cursor-pointer text-xs font-semibold text-text-2 flex items-center gap-1.5">
+                    <ScrollText size={13} /> {t('scep_page.transaction_log')}
+                  </summary>
+                  <ol className="mt-1 space-y-1 text-xs text-text-muted font-mono">
+                    {errorLog.map((l, i) => <li key={i}>{l}</li>)}
+                  </ol>
+                </details>
+              )}
             </div>
           </motion.div>
         )}

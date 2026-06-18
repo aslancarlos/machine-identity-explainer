@@ -118,7 +118,14 @@ function requestRaw(urlStr, { method = 'GET', headers = {}, body = null, timeout
       hostname: u.hostname,
       port: u.port || (u.protocol === 'https:' ? 443 : 80),
       path: u.pathname + u.search,
-      headers,
+      headers: {
+        // Force an uncompressed body — a gzip/deflate body would be fed to the
+        // DER parser as-is and fail with "Too few bytes to parse DER".
+        'Accept-Encoding': 'identity',
+        'Accept': '*/*',
+        'User-Agent': 'MachineIdentityExplainer-SCEP/1.0',
+        ...headers,
+      },
       // TLS verification is ON by default. SCEP CAs that front their endpoint
       // with a private/self-signed cert require an explicit insecureTLS opt-in;
       // the SCEP pkiMessage itself is still signed+encrypted at the PKCS#7 layer.
@@ -135,6 +142,7 @@ function requestRaw(urlStr, { method = 'GET', headers = {}, body = null, timeout
       res.on('end', () => resolve({
         status: res.statusCode,
         headers: res.headers,
+        contentType: (res.headers['content-type'] || '').split(';')[0].trim(),
         body: Buffer.concat(chunks),
       }))
     })
@@ -152,15 +160,52 @@ function withOperation(base, operation, message) {
   return u.toString()
 }
 
+// ── Diagnostics ───────────────────────────────────────────────────────────────
+function describeRes(res) {
+  return `HTTP ${res.status}, ${res.body.length} bytes, content-type=${res.contentType || '?'}`
+}
+// First printable bytes of a body — used to explain non-DER responses.
+function bodyPreview(buf, n = 96) {
+  return buf.toString('utf8', 0, Math.min(buf.length, n)).replace(/[^\x20-\x7e]/g, '.')
+}
+// Accept either raw DER (binary) or a PEM/base64 body; return DER as a binary string.
+function toDerBytes(buf) {
+  const text = buf.toString('latin1')
+  const m = text.match(/-----BEGIN [^-]+-----([\s\S]*?)-----END [^-]+-----/)
+  if (m) return forge.util.decode64(m[1].replace(/\s+/g, ''))
+  return text
+}
+// asn1.fromDer with an actionable error instead of "Too few bytes to parse DER".
+function parseDer(buf, ctx, res) {
+  if (!buf || !buf.length) {
+    throw new Error(`${ctx}: empty response from SCEP server${res ? ` (${describeRes(res)})` : ''}`)
+  }
+  const derBytes = toDerBytes(buf)
+  try {
+    return asn1.fromDer(forge.util.createBuffer(derBytes))
+  } catch (e) {
+    const meta = res ? `${describeRes(res)}; ` : ''
+    throw new Error(
+      `${ctx}: response is not valid DER (${meta}preview: "${bodyPreview(buf)}"). ` +
+      `Check that the URL is the SCEP endpoint itself, not an HTML/login page.`
+    )
+  }
+}
+
 // ── GetCACaps / GetCACert ───────────────────────────────────────────────────
 async function getCACaps(base, netOpts) {
+  const note = (netOpts && netOpts.note) || (() => {})
   try {
     const res = await requestRaw(withOperation(base, 'GetCACaps'), { ...netOpts })
+    note(`GetCACaps → ${describeRes(res)}`)
     if (res.status !== 200) return new Set()
+    // Caps lines may come back as text; keep only the short token lines.
     return new Set(
-      res.body.toString('utf8').split(/\r?\n/).map((l) => l.trim()).filter(Boolean)
+      res.body.toString('utf8').split(/\r?\n/).map((l) => l.trim())
+        .filter((l) => l && l.length < 40 && !/[<>\s]/.test(l))
     )
-  } catch {
+  } catch (e) {
+    note(`GetCACaps failed (${e.message}); assuming no extra capabilities`)
     return new Set()
   }
 }
@@ -172,12 +217,13 @@ async function getCACaps(base, netOpts) {
  * (application/x-x509-ca-ra-cert) where an RA cert is present.
  */
 async function getCACert(base, caIdent, netOpts) {
+  const note = (netOpts && netOpts.note) || (() => {})
   const res = await requestRaw(withOperation(base, 'GetCACert', caIdent || ''), { ...netOpts })
-  if (res.status !== 200 || !res.body.length) {
-    throw new Error(`GetCACert failed (HTTP ${res.status})`)
+  note(`GetCACert → ${describeRes(res)}`)
+  if (res.status !== 200) {
+    throw new Error(`GetCACert failed (${describeRes(res)}; preview: "${bodyPreview(res.body)}")`)
   }
-  const der = forge.util.createBuffer(res.body.toString('binary'))
-  const obj = asn1.fromDer(der)
+  const obj = parseDer(res.body, 'GetCACert', res)
 
   let certs = []
   try {
@@ -421,8 +467,12 @@ function findAttrValue(setOfAttrs, oidStr) {
   return null
 }
 
-function parseResponse(derBuffer, requesterKey) {
-  const obj = asn1.fromDer(forge.util.createBuffer(derBuffer.toString('binary')))
+function parseResponse(derBuffer, requesterKey, res) {
+  const obj = parseDer(derBuffer, 'CertRep (PKIOperation response)', res)
+  // ContentInfo -> contentType OID must be signedData
+  if (!obj.value || obj.value.length < 2 || asn1.derToOid(obj.value[0].value) !== OID.signedData) {
+    throw new Error('CertRep is not a PKCS#7 SignedData pkiMessage')
+  }
   // ContentInfo -> [1] content -> SignedData
   const signedData = obj.value[1].value[0]
   // SignedData fields: version, digestAlgs, encapContentInfo, [0]certs?, [n]crls?, signerInfos
@@ -463,6 +513,7 @@ function parseResponse(derBuffer, requesterKey) {
 
 // ── PKIOperation transport ────────────────────────────────────────────────────
 async function pkiOperation(base, pkiMessageDer, canPost, netOpts) {
+  const note = (netOpts && netOpts.note) || (() => {})
   const bodyBuf = Buffer.from(pkiMessageDer, 'binary')
   if (canPost) {
     const res = await requestRaw(withOperation(base, 'PKIOperation'), {
@@ -474,13 +525,18 @@ async function pkiOperation(base, pkiMessageDer, canPost, netOpts) {
       body: bodyBuf,
       ...netOpts,
     })
-    if (res.status === 200) return res.body
-    // Some CAs reject POST; fall through to GET.
+    note(`PKIOperation POST → ${describeRes(res)}`)
+    if (res.status === 200 && res.body.length) return res
+    note('POST rejected or empty; retrying as GET…')
   }
   const b64 = bodyBuf.toString('base64')
-  const res = await requestRaw(withOperation(base, 'PKIOperation', b64), { ...netOpts })
-  if (res.status !== 200) throw new Error(`PKIOperation failed (HTTP ${res.status})`)
-  return res.body
+  const res = await requestRaw(withOperation(base, 'PKIOperation', encodeURIComponent(b64)), { ...netOpts })
+  note(`PKIOperation GET → ${describeRes(res)}`)
+  if (res.status !== 200) {
+    throw new Error(`PKIOperation failed (${describeRes(res)}; preview: "${bodyPreview(res.body)}")`)
+  }
+  if (!res.body.length) throw new Error('PKIOperation returned an empty body')
+  return res
 }
 
 // ── Public API ──────────────────────────────────────────────────────────────
@@ -511,6 +567,7 @@ async function enroll(o) {
   const insecureTLS = !!o.insecureTLS
   if (insecureTLS) note('⚠ TLS verification of the SCEP endpoint is DISABLED for this request.')
 
+  try {
   // Resolve and validate the target once, then pin the address for every call.
   let parsedUrl
   try { parsedUrl = new URL(o.url) } catch { throw new Error(`Invalid SCEP url: ${o.url}`) }
@@ -519,7 +576,7 @@ async function enroll(o) {
   }
   note(`Resolving ${parsedUrl.hostname}…`)
   const pinned = await resolvePinnedAddress(parsedUrl.hostname)
-  const netOpts = { insecureTLS, pinned }
+  const netOpts = { insecureTLS, pinned, note }
 
   note('Negotiating capabilities (GetCACaps)…')
   const caps = await getCACaps(o.url, netOpts)
@@ -548,10 +605,10 @@ async function enroll(o) {
   })
 
   note('Submitting enrolment request (PKIOperation)…')
-  const respBuf = await pkiOperation(o.url, pkiMessageDer, canPost, netOpts)
+  const respRes = await pkiOperation(o.url, pkiMessageDer, canPost, netOpts)
 
   note('Parsing CA response…')
-  const parsed = parseResponse(respBuf, keys.privateKey)
+  const parsed = parseResponse(respRes.body, keys.privateKey, respRes)
 
   const statusMap = { '0': 'SUCCESS', '2': 'FAILURE', '3': 'PENDING' }
   const status = statusMap[parsed.pkiStatus] || `UNKNOWN(${parsed.pkiStatus})`
@@ -593,6 +650,11 @@ async function enroll(o) {
     note(`Issued certificate: ${leaf.subject.getField('CN') ? leaf.subject.getField('CN').value : '(no CN)'}`)
   }
   return out
+  } catch (err) {
+    // Preserve the partial transaction log so the UI can show how far it got.
+    err.scepLog = log
+    throw err
+  }
 }
 
 module.exports = { enroll }

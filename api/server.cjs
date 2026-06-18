@@ -343,7 +343,10 @@ const server = http.createServer(async (req, res) => {
         res.end(JSON.stringify(result))
       } catch (e) {
         res.writeHead(502)
-        res.end(JSON.stringify({ error: e.message || 'SCEP enrolment failed' }))
+        res.end(JSON.stringify({
+          error: e.message || 'SCEP enrolment failed',
+          log: Array.isArray(e.scepLog) ? e.scepLog : undefined,
+        }))
       }
     })
     return
