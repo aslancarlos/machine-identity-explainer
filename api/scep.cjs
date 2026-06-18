@@ -288,27 +288,39 @@ function buildSubjectAttrs(subject) {
   return attrs
 }
 
-// altNames per forge: type 2 = DNS, 1 = rfc822 (email), 7 = IP, 6 = URI
-function buildAltNames(sans = {}) {
-  const out = []
-  for (const dns of sans.dns || []) out.push({ type: 2, value: dns })
-  for (const email of sans.email || []) out.push({ type: 1, value: email })
-  for (const ip of sans.ip || []) out.push({ type: 7, ip })
-  for (const uri of sans.uri || []) out.push({ type: 6, value: uri })
-  // UPN goes in as an otherName (1.3.6.1.4.1.311.20.2.3) for user certs
+function ipv4ToBytes(ip) {
+  const m = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(ip)
+  if (!m) return null
+  return String.fromCharCode(+m[1], +m[2], +m[3], +m[4])
+}
+
+// Build the DER of the subjectAltName extension value (GeneralNames) by hand.
+// forge's altNames encoder mis-encodes otherName: it stringifies the value to
+// "[object Object]" and emits a PRIMITIVE [0] — which strict CAs reject as
+// "unexpected implicit primitive encoding". GeneralName tags (RFC 5280):
+//   [1] rfc822Name, [2] dNSName, [6] URI  → IMPLICIT IA5String (primitive)
+//   [7] iPAddress                          → primitive octets
+//   [0] otherName                          → CONSTRUCTED { type-id OID, [0] EXPLICIT value }
+function buildSanExtensionValue(sans = {}) {
+  const ctxPrim = (tag, bytes) => asn1.create(asn1.Class.CONTEXT_SPECIFIC, tag, false, bytes)
+  const names = []
+  for (const dns of sans.dns || []) names.push(ctxPrim(2, dns))
+  for (const email of sans.email || []) names.push(ctxPrim(1, email))
+  for (const uri of sans.uri || []) names.push(ctxPrim(6, uri))
+  for (const ip of sans.ip || []) { const b = ipv4ToBytes(ip); if (b) names.push(ctxPrim(7, b)) }
+  // UPN as otherName (1.3.6.1.4.1.311.20.2.3) — MUST be a constructed [0].
   for (const upn of sans.upn || []) {
-    out.push({
-      type: 0,
-      value: asn1.create(asn1.Class.CONTEXT_SPECIFIC, 0, true, [
-        asn1.create(asn1.Class.UNIVERSAL, asn1.Type.OID, false,
-          asn1.oidToDer('1.3.6.1.4.1.311.20.2.3').getBytes()),
-        asn1.create(asn1.Class.CONTEXT_SPECIFIC, 0, true, [
-          asn1.create(asn1.Class.UNIVERSAL, asn1.Type.UTF8, false, upn),
-        ]),
+    names.push(asn1.create(asn1.Class.CONTEXT_SPECIFIC, 0, true, [
+      asn1.create(asn1.Class.UNIVERSAL, asn1.Type.OID, false,
+        asn1.oidToDer('1.3.6.1.4.1.311.20.2.3').getBytes()),
+      asn1.create(asn1.Class.CONTEXT_SPECIFIC, 0, true, [
+        asn1.create(asn1.Class.UNIVERSAL, asn1.Type.UTF8, false, forge.util.encodeUtf8(upn)),
       ]),
-    })
+    ]))
   }
-  return out
+  if (!names.length) return null
+  const generalNames = asn1.create(asn1.Class.UNIVERSAL, asn1.Type.SEQUENCE, true, names)
+  return asn1.toDer(generalNames).getBytes()
 }
 
 function makeKeyAndCsr({ subject, sans, challenge, keyBits, mdName }) {
@@ -320,11 +332,12 @@ function makeKeyAndCsr({ subject, sans, challenge, keyBits, mdName }) {
   csr.setSubject(subjectAttrs)
 
   const attributes = [{ name: 'challengePassword', value: challenge }]
-  const altNames = buildAltNames(sans)
-  if (altNames.length) {
+  const sanValue = buildSanExtensionValue(sans)
+  if (sanValue) {
+    // Raw extension: id = subjectAltName OID, value = our hand-built GeneralNames DER.
     attributes.push({
       name: 'extensionRequest',
-      extensions: [{ name: 'subjectAltName', altNames }],
+      extensions: [{ id: '2.5.29.17', value: sanValue }],
     })
   }
   csr.setAttributes(attributes)
