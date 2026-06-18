@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   ShieldX, Search, Loader, KeyRound, Eye, EyeOff, AlertTriangle,
-  Ban, RefreshCw, X, Info, Clock,
+  Ban, RefreshCw, X, Info, Clock, Filter,
 } from 'lucide-react'
 
 // ── Types (from ZTPKI swagger) ───────────────────────────────────────────────
@@ -31,6 +31,10 @@ const REASONS = [
 ] as const
 
 const DEFAULT_BASE = 'https://ztpki-staging.venafi.com/api/v2'
+
+// This page is scoped to a single ZTPKI account. Both search and the
+// "issued in the last 24h" panel filter by it via the `account` payload field.
+const ACCOUNT = 'CyberArk Latam'
 
 function statusStyle(s?: string) {
   switch (s) {
@@ -100,7 +104,7 @@ export default function ZtpkiPage() {
     if (!hawkId.trim() || !hawkKey) { setError(t('ztpki_page.need_creds')); return }
     setError(null); setLoading(true); setCerts(null)
     try {
-      const payload: Record<string, unknown> = { limit: Number(limit) || 50, offset: 0 }
+      const payload: Record<string, unknown> = { limit: Number(limit) || 50, offset: 0, account: ACCOUNT }
       if (cn.trim()) payload.common_name = cn.trim()
       if (serial.trim()) payload.serial = serial.trim()
       if (status) payload.status = status
@@ -120,7 +124,7 @@ export default function ZtpkiPage() {
     setRecentErr(null); setRecentLoading(true)
     try {
       const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
-      const data: CertList = await ztpki('/certificates/', 'POST', { created_since: since, limit: 50 })
+      const data: CertList = await ztpki('/certificates/', 'POST', { created_since: since, limit: 50, account: ACCOUNT })
       const items = (data.items || [])
         .slice()
         .sort((a, b) => new Date(b.notBefore || 0).getTime() - new Date(a.notBefore || 0).getTime())
@@ -164,6 +168,9 @@ export default function ZtpkiPage() {
         </span>
         <h1 className="text-4xl sm:text-5xl font-bold mt-4 text-text">{t('ztpki_page.title')}</h1>
         <p className="text-text-2 mt-3 max-w-2xl mx-auto">{t('ztpki_page.subtitle')}</p>
+        <div className="mt-4 inline-flex items-center gap-1.5 text-xs font-semibold text-mi-cyan bg-mi-cyan/10 border border-mi-cyan/30 rounded-full px-3 py-1">
+          <Filter size={12} /> {t('ztpki_page.scoped_to')}: {ACCOUNT}
+        </div>
       </div>
 
       {/* Credentials */}

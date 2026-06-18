@@ -574,6 +574,7 @@
     "recent_loading": "Carregando…",
     "recent_hint": "Informe suas credenciais HAWK e clique em Carregar (ou faça uma busca).",
     "recent_empty": "Nenhum certificado emitido nas últimas 24 horas.",
-    "recent_issued": "Emitido"
+    "recent_issued": "Emitido",
+    "scoped_to": "Restrito à conta"
   }
 }
