@@ -32,6 +32,14 @@ const REASONS = [
 
 const DEFAULT_BASE = 'https://ztpki-staging.venafi.com/api/v2'
 
+// ZTPKI's common_name filter is exact-match. To support wildcards (e.g.
+// *.dominio.com) we fetch a broader page and match client-side. `*` → any run.
+function wildcardToRegex(pattern: string): RegExp {
+  const esc = pattern.replace(/[.+?^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*')
+  return new RegExp('^' + esc + '$', 'i')
+}
+const WILDCARD_SCAN_LIMIT = 1000
+
 function statusStyle(s?: string) {
   switch (s) {
     case 'VALID':   return 'text-spiffe bg-spiffe/15 border-spiffe/30'
@@ -69,6 +77,7 @@ export default function ZtpkiPage() {
   const [error, setError] = useState<string | null>(null)
   const [certs, setCerts] = useState<CertItem[] | null>(null)
   const [count, setCount] = useState(0)
+  const [searchNote, setSearchNote] = useState<string | null>(null)
 
   // recently issued (last 24h)
   const [recent, setRecent] = useState<CertItem[] | null>(null)
@@ -98,15 +107,32 @@ export default function ZtpkiPage() {
   async function runSearch(e?: React.FormEvent) {
     e?.preventDefault()
     if (!hawkId.trim() || !hawkKey) { setError(t('ztpki_page.need_creds')); return }
-    setError(null); setLoading(true); setCerts(null)
+    setError(null); setLoading(true); setCerts(null); setSearchNote(null)
     try {
-      const payload: Record<string, unknown> = { limit: Number(limit) || 50, offset: 0 }
-      if (cn.trim()) payload.common_name = cn.trim()
+      const cnTerm = cn.trim()
+      const wildcard = cnTerm.includes('*')
+      // For wildcard CN we can't use the exact server filter — fetch a broader
+      // page (still scoped by serial/status) and match the pattern client-side.
+      const payload: Record<string, unknown> = {
+        limit: wildcard ? WILDCARD_SCAN_LIMIT : (Number(limit) || 50),
+        offset: 0,
+      }
+      if (cnTerm && !wildcard) payload.common_name = cnTerm
       if (serial.trim()) payload.serial = serial.trim()
       if (status) payload.status = status
       const data: CertList = await ztpki('/certificates/', 'POST', payload)
-      setCerts(data.items || [])
-      setCount(data.count ?? (data.items?.length || 0))
+      let items = data.items || []
+      if (wildcard) {
+        const re = wildcardToRegex(cnTerm)
+        const scanned = items.length
+        items = items.filter(c => re.test(c.commonName || '') || (c.SANs || []).some(s => re.test(s)))
+        setSearchNote(
+          t('ztpki_page.wildcard_note', { matched: items.length, scanned }) +
+          (scanned >= WILDCARD_SCAN_LIMIT ? ' ' + t('ztpki_page.wildcard_truncated') : '')
+        )
+      }
+      setCerts(items)
+      setCount(wildcard ? items.length : (data.count ?? items.length))
       loadRecent() // refresh the "issued in last 24h" panel with the same creds
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Request failed')
@@ -205,7 +231,8 @@ export default function ZtpkiPage() {
         <div className="grid sm:grid-cols-4 gap-4">
           <div className="sm:col-span-2">
             <label className={label}>{t('ztpki_page.common_name')}</label>
-            <input className={field} value={cn} onChange={e => setCn(e.target.value)} placeholder="host.example.com" />
+            <input className={field} value={cn} onChange={e => setCn(e.target.value)} placeholder="host.example.com  ·  *.dominio.com" />
+            <p className="text-[11px] text-text-muted mt-1">{t('ztpki_page.cn_hint')}</p>
           </div>
           <div>
             <label className={label}>{t('ztpki_page.serial')}</label>
@@ -248,7 +275,10 @@ export default function ZtpkiPage() {
       {certs && (
         <div className="bg-bg-card border border-border rounded-2xl overflow-hidden">
           <div className="px-5 py-3 border-b border-border flex items-center justify-between">
-            <span className="text-sm text-text-2">{t('ztpki_page.found', { count })}</span>
+            <span className="text-sm text-text-2">
+              {t('ztpki_page.found', { count })}
+              {searchNote && <span className="text-text-muted"> · {searchNote}</span>}
+            </span>
             <button onClick={() => runSearch()} className="text-text-muted hover:text-mi-cyan" title={t('ztpki_page.refresh')}>
               <RefreshCw size={15} />
             </button>
