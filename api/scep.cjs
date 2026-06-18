@@ -459,6 +459,16 @@ function buildPkiMessage(csrDer, recipientCert, signerCert, signerKey, subjectAt
 }
 
 // ── Response parsing ─────────────────────────────────────────────────────────
+// Collect the raw bytes of an OCTET STRING, whether it is a single primitive
+// value or a BER constructed / indefinite-length string split into segments
+// (Venafi, Microsoft NDES and others emit the enveloped content this way).
+function octetStringBytes(node) {
+  if (node && node.constructed && Array.isArray(node.value)) {
+    return node.value.map(octetStringBytes).join('')
+  }
+  return node && typeof node.value === 'string' ? node.value : ''
+}
+
 function findAttrValue(setOfAttrs, oidStr) {
   for (const a of setOfAttrs.value) {
     const oid = asn1.derToOid(a.value[0].value)
@@ -499,10 +509,18 @@ function parseResponse(derBuffer, requesterKey, res) {
   if (pkiStatus === '0') {
     // SUCCESS: encapContentInfo holds an EnvelopedData encrypted to our key.
     const encap = signedData.value[2]
-    const eContentDer = encap.value[1].value[0].value // OCTET STRING bytes
-    const envObj = asn1.fromDer(forge.util.createBuffer(eContentDer))
+    // encap = SEQUENCE { eContentType OID, [0] EXPLICIT eContent }
+    // eContent is an OCTET STRING that may be BER-segmented (constructed).
+    const eContentDer = octetStringBytes(encap.value[1].value[0])
+    if (!eContentDer.length) {
+      throw new Error('CertRep SUCCESS but the enveloped content (eContent) was empty')
+    }
+    let envObj
+    try { envObj = asn1.fromDer(forge.util.createBuffer(eContentDer)) }
+    catch (e) { throw new Error(`CertRep enveloped content is not valid DER (${eContentDer.length} bytes): ${e.message}`) }
     const p7 = forge.pkcs7.messageFromAsn1(envObj)
-    p7.decrypt(p7.recipients[0], requesterKey)
+    try { p7.decrypt(p7.recipients[0], requesterKey) }
+    catch (e) { throw new Error(`Could not decrypt the issued-cert envelope with the request key: ${e.message}`) }
     // Decrypted content is a degenerate certs-only PKCS#7.
     const inner = asn1.fromDer(p7.content)
     const certsP7 = forge.pkcs7.messageFromAsn1(inner)
@@ -663,6 +681,6 @@ module.exports = { enroll }
 module.exports.__internals = {
   OID, asn1, pki, md, digestOid, algId, dnToAsn1,
   attr, printable, octet, oidVal, sortedAttrSet, buildSubjectAttrs,
-  isPrivateIp, resolvePinnedAddress, withOperation,
+  isPrivateIp, resolvePinnedAddress, withOperation, octetStringBytes,
   getCACaps, getCACert, makeKeyAndCsr, buildPkiMessage, pkiOperation, parseResponse,
 }
