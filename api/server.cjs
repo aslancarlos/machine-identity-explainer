@@ -118,9 +118,10 @@ function validateZtpkiInput(b) {
   const method = (b.method || 'GET').toUpperCase()
   if (!ZTPKI_METHODS.includes(method)) return `method must be one of ${ZTPKI_METHODS.join(', ')}`
 
-  // Path allow-list: only the certificate lifecycle endpoints this tool uses.
-  if (!isStr(b.path, 512) || !b.path.startsWith('/certificates')) {
-    return 'path must start with /certificates'
+  // Path allow-list: certificate lifecycle + account/org discovery.
+  const ALLOWED_PREFIXES = ['/certificates', '/accounts', '/organizations']
+  if (!isStr(b.path, 512) || !ALLOWED_PREFIXES.some(p => b.path.startsWith(p))) {
+    return `path must start with one of: ${ALLOWED_PREFIXES.join(', ')}`
   }
   if (b.path.includes('..') || b.path.includes('//')) return 'Invalid path'
   if (b.body !== undefined && b.body !== null && typeof b.body !== 'object') {

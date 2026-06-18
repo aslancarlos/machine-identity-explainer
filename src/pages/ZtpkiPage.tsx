@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   ShieldX, Search, Loader, KeyRound, Eye, EyeOff, AlertTriangle,
-  Ban, RefreshCw, X, Info, Clock, Filter,
+  Ban, RefreshCw, X, Info, Clock, Building2,
 } from 'lucide-react'
 
 // ── Types (from ZTPKI swagger) ───────────────────────────────────────────────
@@ -32,9 +32,7 @@ const REASONS = [
 
 const DEFAULT_BASE = 'https://ztpki-staging.venafi.com/api/v2'
 
-// This page is scoped to a single ZTPKI account. Both search and the
-// "issued in the last 24h" panel filter by it via the `account` payload field.
-const ACCOUNT = 'CyberArk Latam'
+interface Account { id: string; name: string }
 
 function statusStyle(s?: string) {
   switch (s) {
@@ -62,6 +60,12 @@ export default function ZtpkiPage() {
   const [hawkKey, setHawkKey] = useState('')
   const [showKey, setShowKey] = useState(false)
   const [baseUrl, setBaseUrl] = useState(DEFAULT_BASE)
+
+  // accounts (loaded from the tenant after entering credentials)
+  const [accounts, setAccounts] = useState<Account[] | null>(null)
+  const [accountsLoading, setAccountsLoading] = useState(false)
+  const [accountsErr, setAccountsErr] = useState<string | null>(null)
+  const [account, setAccount] = useState('') // selected account id
 
   // search filters
   const [cn, setCn] = useState('')
@@ -99,19 +103,48 @@ export default function ZtpkiPage() {
     return data
   }
 
+  async function loadAccounts() {
+    if (!hawkId.trim() || !hawkKey) { setAccountsErr(t('ztpki_page.need_creds')); return }
+    setAccountsErr(null); setAccountsLoading(true)
+    try {
+      const data = await ztpki('/accounts', 'GET')
+      // The accounts endpoint isn't in the swagger; accept array or wrapped list.
+      const raw: any[] = Array.isArray(data) ? data : (data.items || data.accounts || data.data || [])
+      const list: Account[] = raw
+        .map(a => ({
+          id: String(a.id ?? a.accountId ?? a.uuid ?? a.name ?? ''),
+          name: String(a.name ?? a.accountName ?? a.displayName ?? a.id ?? ''),
+        }))
+        .filter(a => a.id)
+        .sort((a, b) => a.name.localeCompare(b.name))
+      setAccounts(list)
+      if (list.length === 1) setAccount(list[0].id)
+      else {
+        // Pre-select "CyberArk Latam" if present.
+        const cl = list.find(a => /cyberark\s*latam/i.test(a.name))
+        if (cl) setAccount(cl.id)
+      }
+    } catch (err: unknown) {
+      setAccountsErr(err instanceof Error ? err.message : 'Request failed')
+    } finally {
+      setAccountsLoading(false)
+    }
+  }
+
   async function runSearch(e?: React.FormEvent) {
     e?.preventDefault()
     if (!hawkId.trim() || !hawkKey) { setError(t('ztpki_page.need_creds')); return }
+    if (!account) { setError(t('ztpki_page.need_account')); return }
     setError(null); setLoading(true); setCerts(null)
     try {
-      const payload: Record<string, unknown> = { limit: Number(limit) || 50, offset: 0, account: ACCOUNT }
+      const payload: Record<string, unknown> = { limit: Number(limit) || 50, offset: 0, account }
       if (cn.trim()) payload.common_name = cn.trim()
       if (serial.trim()) payload.serial = serial.trim()
       if (status) payload.status = status
       const data: CertList = await ztpki('/certificates/', 'POST', payload)
       setCerts(data.items || [])
       setCount(data.count ?? (data.items?.length || 0))
-      loadRecent() // refresh the "issued in last 24h" panel with the same creds
+      loadRecent() // refresh the "issued in last 24h" panel for the same account
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Request failed')
     } finally {
@@ -121,10 +154,11 @@ export default function ZtpkiPage() {
 
   async function loadRecent() {
     if (!hawkId.trim() || !hawkKey) { setRecentErr(t('ztpki_page.need_creds')); return }
+    if (!account) { setRecentErr(t('ztpki_page.need_account')); return }
     setRecentErr(null); setRecentLoading(true)
     try {
       const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
-      const data: CertList = await ztpki('/certificates/', 'POST', { created_since: since, limit: 50, account: ACCOUNT })
+      const data: CertList = await ztpki('/certificates/', 'POST', { created_since: since, limit: 50, account })
       const items = (data.items || [])
         .slice()
         .sort((a, b) => new Date(b.notBefore || 0).getTime() - new Date(a.notBefore || 0).getTime())
@@ -168,9 +202,6 @@ export default function ZtpkiPage() {
         </span>
         <h1 className="text-4xl sm:text-5xl font-bold mt-4 text-text">{t('ztpki_page.title')}</h1>
         <p className="text-text-2 mt-3 max-w-2xl mx-auto">{t('ztpki_page.subtitle')}</p>
-        <div className="mt-4 inline-flex items-center gap-1.5 text-xs font-semibold text-mi-cyan bg-mi-cyan/10 border border-mi-cyan/30 rounded-full px-3 py-1">
-          <Filter size={12} /> {t('ztpki_page.scoped_to')}: {ACCOUNT}
-        </div>
       </div>
 
       {/* Credentials */}
@@ -202,6 +233,34 @@ export default function ZtpkiPage() {
         <p className="flex items-start gap-1.5 text-[11px] text-text-muted mt-3">
           <Info size={13} className="shrink-0 mt-0.5" /> {t('ztpki_page.creds_note')}
         </p>
+
+        {/* Account selection — loaded from the tenant with the entered creds */}
+        <div className="border-t border-border mt-4 pt-4">
+          <div className="flex items-end gap-3 flex-wrap">
+            <div className="flex-1 min-w-[200px]">
+              <label className={label + ' flex items-center gap-1.5'}>
+                <Building2 size={12} /> {t('ztpki_page.account')}
+              </label>
+              <select className={field} value={account} onChange={e => setAccount(e.target.value)}
+                disabled={!accounts || accounts.length === 0}>
+                {!accounts && <option value="">{t('ztpki_page.account_load_first')}</option>}
+                {accounts && accounts.length === 0 && <option value="">{t('ztpki_page.account_none')}</option>}
+                {accounts && accounts.length > 0 && (
+                  <>
+                    <option value="">{t('ztpki_page.account_select')}</option>
+                    {accounts.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+                  </>
+                )}
+              </select>
+            </div>
+            <button type="button" onClick={loadAccounts} disabled={accountsLoading}
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg border border-border text-text-2 hover:bg-bg-muted disabled:opacity-50 transition-colors shrink-0">
+              {accountsLoading ? <Loader size={14} className="animate-spin" /> : <RefreshCw size={14} />}
+              {accountsLoading ? t('ztpki_page.account_loading') : t('ztpki_page.account_load')}
+            </button>
+          </div>
+          {accountsErr && <div className="text-xs text-mi-red mt-2 break-words">{accountsErr}</div>}
+        </div>
       </div>
 
       {/* Search */}
@@ -231,7 +290,7 @@ export default function ZtpkiPage() {
               onChange={e => setLimit(Number(e.target.value))} />
           </div>
           <div className="sm:col-span-3 flex items-end">
-            <button type="submit" disabled={loading}
+            <button type="submit" disabled={loading || !account}
               className="w-full flex items-center justify-center gap-2 bg-mi-cyan text-bg font-semibold rounded-lg px-4 py-2.5 hover:bg-mi-cyan/80 disabled:opacity-50 transition-colors">
               {loading ? <><Loader size={16} className="animate-spin" /> {t('ztpki_page.searching')}</>
                        : <><Search size={16} /> {t('ztpki_page.search_btn')}</>}

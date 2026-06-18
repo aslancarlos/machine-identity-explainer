@@ -575,6 +575,13 @@
     "recent_hint": "Enter your HAWK credentials and click Load (or run a search).",
     "recent_empty": "No certificates issued in the last 24 hours.",
     "recent_issued": "Issued",
-    "scoped_to": "Scoped to account"
+    "scoped_to": "Scoped to account",
+    "account": "Account",
+    "account_load": "Load accounts",
+    "account_loading": "Loading…",
+    "account_select": "Select an account…",
+    "account_load_first": "Load accounts first",
+    "account_none": "No accounts found",
+    "need_account": "Select an account first."
   }
 }

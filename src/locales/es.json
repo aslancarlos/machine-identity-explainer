@@ -575,6 +575,13 @@
     "recent_hint": "Ingrese sus credenciales HAWK y haga clic en Cargar (o realice una búsqueda).",
     "recent_empty": "Ningún certificado emitido en las últimas 24 horas.",
     "recent_issued": "Emitido",
-    "scoped_to": "Limitado a la cuenta"
+    "scoped_to": "Limitado a la cuenta",
+    "account": "Cuenta",
+    "account_load": "Cargar cuentas",
+    "account_loading": "Cargando…",
+    "account_select": "Seleccione una cuenta…",
+    "account_load_first": "Cargue las cuentas primero",
+    "account_none": "No se encontraron cuentas",
+    "need_account": "Seleccione una cuenta primero."
   }
 }
