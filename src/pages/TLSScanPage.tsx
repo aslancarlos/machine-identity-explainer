@@ -358,7 +358,7 @@ const NIST_REFS = [
       'RSA 2048-bit: 112-bit security, adequate through 2030 only',
       'RSA 3072-bit or ECDSA P-384: security beyond 2030',
       'Short cryptoperiods minimize compromise exposure window',
-      'Automate certificate renewal with ACME, cert-manager, or Vault PKI',
+      'Automate certificate renewal with ACME, cert-manager, or PANW Strata NGTS',
     ],
   },
   {

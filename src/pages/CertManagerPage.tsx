@@ -34,7 +34,7 @@ const PRACTICES = [
 
 const TOOLS = [
   { badge: 'K8s',   key: 'certmanager',  color: 'text-k8s',      border: 'border-k8s/20',      bg: 'bg-k8s/5',      name: 'cert-manager'         },
-  { badge: 'Vault', key: 'vault',        color: 'text-mi-gold',  border: 'border-mi-gold/20',  bg: 'bg-mi-gold/5',  name: 'HashiCorp Vault PKI'  },
+  { badge: 'NGTS',  key: 'ngts',         color: 'text-mi-gold',  border: 'border-mi-gold/20',  bg: 'bg-mi-gold/5',  name: 'PANW Strata NGTS'     },
   { badge: 'ACME',  key: 'letsencrypt',  color: 'text-spiffe',   border: 'border-spiffe/20',   bg: 'bg-spiffe/5',   name: "Let's Encrypt"        },
   { badge: 'CLM',   key: 'venafi',       color: 'text-mi-cyan',  border: 'border-mi-cyan/20',  bg: 'bg-mi-cyan/5',  name: 'Venafi'               },
 ]

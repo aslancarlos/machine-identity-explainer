@@ -27,7 +27,7 @@ const NODES: N[] = [
   { id:'server',   x:568, y:55,  w:232, h:96,  label:'SPIRE Server',      sub:'spiffe://trust-domain',                       ck:'gold', feat:true   },
   { id:'ca',       x:568, y:210, w:190, h:62,  label:'Certificate Auth.', sub:'X.509 SVID signing',                          ck:'pki'              },
   { id:'serviceb', x:308, y:255, w:168, h:62,  label:'Service B',         sub:'mTLS target workload',                        ck:'spiffe'           },
-  { id:'external', x:300, y:388, w:186, h:62,  label:'Secret Store',      sub:'Vault / Conjur / ASM',                        ck:'slate', external:true },
+  { id:'external', x:300, y:388, w:186, h:62,  label:'Secret Store',      sub:'Conjur / ASM',                                ck:'slate', external:true },
 ]
 
 // Edges
