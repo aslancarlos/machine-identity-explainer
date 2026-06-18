@@ -511,7 +511,8 @@
     "issued_cert": "Issued certificate",
     "chain": "CA chain",
     "private_key": "Private key",
-    "transaction_log": "Transaction log"
+    "transaction_log": "Transaction log",
+    "hint": "Hint"
   },
   "livetools": {
     "badge": "Live Tools",

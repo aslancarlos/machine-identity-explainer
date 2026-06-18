@@ -511,7 +511,8 @@
     "issued_cert": "Certificado emitido",
     "chain": "Cadeia da CA",
     "private_key": "Chave privada",
-    "transaction_log": "Log da transação"
+    "transaction_log": "Log da transação",
+    "hint": "Dica"
   },
   "livetools": {
     "badge": "Ferramentas ao Vivo",

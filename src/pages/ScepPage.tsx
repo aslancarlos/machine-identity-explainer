@@ -14,6 +14,7 @@ interface ScepResult {
   pkiStatus: string | null
   status: 'SUCCESS' | 'PENDING' | 'FAILURE' | string
   failInfo: string | null
+  failHint?: string | null
   certificatePem: string | null
   chainPem: string[]
   privateKeyPem: string
@@ -360,6 +361,12 @@ export default function ScepPage() {
 
               {result.failInfo && (
                 <div className="text-sm text-mi-red bg-mi-red/5 border border-mi-red/20 rounded-lg p-3">{result.failInfo}</div>
+              )}
+              {result.failHint && (
+                <div className="flex items-start gap-2 text-xs text-text-2 bg-bg-muted border border-border rounded-lg p-3">
+                  <Info size={14} className="shrink-0 mt-0.5 text-mi-cyan" />
+                  <span><span className="font-semibold text-text">{t('scep_page.hint')}:</span> {result.failHint}</span>
+                </div>
               )}
 
               {result.status === 'SUCCESS' && result.certificatePem && (

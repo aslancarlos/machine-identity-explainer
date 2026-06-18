@@ -60,6 +60,16 @@ const FAIL_INFO = {
   '4': 'badCertId — no certificate could be identified',
 }
 
+// Actionable guidance per failInfo code — the SCEP CertRep carries no detail
+// beyond the code, so point the operator at the usual root causes.
+const FAIL_HINT = {
+  '0': 'The CA rejected the digest/encryption algorithm. Check GetCACaps and try a different key size or hash.',
+  '1': "The CA could not verify the request signature. Usually a clock skew or a malformed request — sync time (NTP) and retry.",
+  '2': 'The CA refused this enrolment by policy. Most often the challenge password is invalid, expired or already used — regenerate it in the CA console. Otherwise the subject/SAN, key size or profile do not satisfy the SCEP policy. Look up this transactionId in the CA logs for the exact reason.',
+  '3': "Your system clock is too far from the CA's. Sync time via NTP and retry.",
+  '4': 'No matching certificate could be identified (relevant to renewal/GetCert operations).',
+}
+
 // ── SSRF guard ────────────────────────────────────────────────────────────────
 // True for any address that must never be reachable from a public-facing proxy:
 // loopback, RFC1918, link-local, CGNAT, IPv6 ULA/link-local, multicast/reserved.
@@ -640,6 +650,7 @@ async function enroll(o) {
     pkiStatus: parsed.pkiStatus,
     status,
     failInfo: null,
+    failHint: null,
     certificatePem: null,
     chainPem: [],
     privateKeyPem: pki.privateKeyToPem(keys.privateKey),
@@ -650,7 +661,9 @@ async function enroll(o) {
 
   if (parsed.pkiStatus === '2') {
     out.failInfo = FAIL_INFO[parsed.failInfo] || `failInfo=${parsed.failInfo}`
+    out.failHint = FAIL_HINT[parsed.failInfo] || null
     note(`Failure: ${out.failInfo}`)
+    if (out.failHint) note(`Hint: ${out.failHint}`)
     return out
   }
   if (parsed.pkiStatus === '3') {
