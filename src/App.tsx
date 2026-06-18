@@ -17,6 +17,7 @@ import TLSScanPage from './pages/TLSScanPage'
 import CertManagerPage from './pages/CertManagerPage'
 import CLMPage from './pages/CLMPage'
 import ScepPage from './pages/ScepPage'
+import ZtpkiPage from './pages/ZtpkiPage'
 
 function ScrollToTop() {
   const { pathname } = useLocation()
@@ -57,6 +58,7 @@ export default function App() {
           <Route path="/cert-manager"   element={<CertManagerPage />}  />
           <Route path="/clm"            element={<CLMPage />}          />
           <Route path="/scep"           element={<ScepPage />}         />
+          <Route path="/ztpki"          element={<ZtpkiPage />}        />
         </Route>
       </Routes>
     </Router>

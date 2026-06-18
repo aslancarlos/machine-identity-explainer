@@ -131,8 +131,11 @@ function requestRaw(urlStr, { method = 'GET', headers = {}, body = null, timeout
       // the SCEP pkiMessage itself is still signed+encrypted at the PKCS#7 layer.
       rejectUnauthorized: !insecureTLS,
       // Pin to the pre-validated address so the connection cannot be re-pointed
-      // at an internal host between DNS resolution and connect.
-      ...(pinned ? { lookup: (_h, _o, cb) => cb(null, pinned.address, pinned.family) } : {}),
+      // at an internal host between DNS resolution and connect. The lookup must
+      // honour options.all (newer Node requests all addresses → expects array).
+      ...(pinned ? { lookup: (_h, o, cb) =>
+        (o && o.all) ? cb(null, [{ address: pinned.address, family: pinned.family }])
+                     : cb(null, pinned.address, pinned.family) } : {}),
       // SNI / cert validation must still use the real hostname.
       ...(pinned && u.protocol === 'https:' ? { servername: u.hostname } : {}),
     }
